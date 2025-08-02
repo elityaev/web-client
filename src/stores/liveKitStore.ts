@@ -3,30 +3,28 @@ import { RemoteParticipant, RemoteTrack, RemoteTrackPublication } from 'livekit-
 import { LiveKitService } from '../services/liveKitService';
 import { ApiService } from '../services/apiService';
 import { ConnectionState } from '../types';
+import { useOnboardingStore } from './onboardingStore';
 
 interface LiveKitState {
   liveKitService: LiveKitService;
+  room: any;
+  isConnected: boolean;
+  isConnecting: boolean;
   connectionState: ConnectionState;
-  room: any; // Добавляем room для доступа извне
-  isConnected: boolean; // Добавляем простой флаг подключения
   localAudioEnabled: boolean;
   localVideoEnabled: boolean;
-  remoteParticipants: Map<string, RemoteParticipant>;
-  messages: Array<{ id: string; text: string; sender: string; timestamp: Date; isLocal: boolean }>;
-  
-  // Actions
+  remoteParticipants: Map<string, any>;
+  messages: any[];
+
   connect: (roomName?: string, withOnboarding?: boolean) => Promise<void>;
   disconnect: () => Promise<void>;
-  toggleAudio: () => Promise<void>;
-  toggleVideo: () => Promise<void>;
-  sendMessage: (message: string) => Promise<void>;
-  attachTrackToElement: (track: RemoteTrack, elementId: string) => void;
-  detachTrackFromElement: (track: RemoteTrack) => void;
+  setMicrophoneEnabled: (enabled: boolean) => Promise<void>;
+  setVideoEnabled: (enabled: boolean) => Promise<void>;
 }
 
 export const useLiveKitStore = create<LiveKitState>((set, get) => {
   const liveKitService = new LiveKitService();
-  
+
   // Переменная для хранения текущего room
   let currentRoom: any = null;
 
@@ -44,7 +42,7 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
   liveKitService.setOnTrackSubscribed((track, publication, participant) => {
     console.log('Track subscribed:', track.kind, participant.identity);
-    
+
     if (track.kind === 'video') {
       // Автоматически прикрепляем видео к элементу
       const videoElement = document.getElementById('remote-video') as HTMLVideoElement;
@@ -88,7 +86,7 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
   liveKitService.setOnDataReceived((payload, participant) => {
     const decoder = new TextDecoder();
     const text = decoder.decode(payload);
-    
+
     try {
       const data = JSON.parse(text);
       if (data.type === 'message') {
@@ -124,8 +122,9 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
   return {
     liveKitService,
-    room: currentRoom, // Предоставляем доступ к room
-    isConnected: false, // Инициализируем как отключенный
+    room: currentRoom,
+    isConnected: false,
+    isConnecting: false,
     connectionState: {
       status: 'disconnected',
       participantCount: 0,
@@ -137,30 +136,48 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
     connect: async (roomName: string = 'assistant-room', withOnboarding: boolean = false) => {
       try {
-        // Получаем токен через API сервис
+        console.log('🔄 Starting connection process with onboarding:', withOnboarding);
+        set({ isConnecting: true });
+
         const tokenRequest = {
-          language: 'ru-RU',
+          language: 'ru',
           platform: 'android',
           app_version: '1.0.0',
-          onboarding_done: !withOnboarding, // Если нужен онбординг, то onboarding_done = false
+          onboarding_done: !withOnboarding,
+          permissions: ['microphone'],
         };
 
+        console.log('🎫 Requesting LiveKit token...');
         const token = await ApiService.getLiveKitToken(tokenRequest);
-        
+        console.log('✅ LiveKit token received');
+
+        console.log('🔌 Connecting to LiveKit...');
         await liveKitService.connect(token);
-        // Сохраняем room для доступа извне  
         currentRoom = liveKitService.currentRoom;
-        set({ 
+        console.log('✅ Connected to LiveKit room:', currentRoom);
+
+        // Инициализируем OnboardingStore с room
+        if (withOnboarding) {
+          console.log('🎯 Initializing OnboardingStore with room');
+          const onboardingStore = useOnboardingStore.getState();
+          onboardingStore.initializeWithRoom(currentRoom);
+          console.log('✅ OnboardingStore initialized');
+        }
+
+        set({
           room: currentRoom,
-          isConnected: true // Обновляем статус подключения
+          isConnected: true,
+          isConnecting: false
         });
-        
-        // Включаем микрофон после подключения
+
+        console.log('🎤 Enabling microphone...');
         await liveKitService.setMicrophoneEnabled(true);
         set({ localAudioEnabled: true });
+        console.log('✅ Microphone enabled');
       } catch (error) {
-        console.error('Failed to connect:', error);
+        console.error('❌ Connection failed:', error);
         set((state) => ({
+          isConnecting: false,
           connectionState: {
             ...state.connectionState,
             status: 'error',
@@ -172,42 +189,40 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
     disconnect: async () => {
       try {
+        console.log('🔄 Starting disconnect process...');
         await liveKitService.disconnect();
         currentRoom = null;
         set({
           room: null,
-          isConnected: false, // Обновляем статус подключения
-          localAudioEnabled: false,
-          localVideoEnabled: false,
-          messages: [],
-        });
-        console.log('Successfully disconnected from LiveKit room');
-      } catch (error) {
-        console.error('Error during disconnect:', error);
-        // Все равно сбрасываем состояние при ошибке
-        currentRoom = null;
-        set({
-          room: null,
           isConnected: false,
-          localAudioEnabled: false,
-          localVideoEnabled: false,
-          messages: [],
+          isConnecting: false,
+          connectionState: {
+            status: 'disconnected',
+            participantCount: 0,
+          },
         });
+        console.log('✅ Disconnected successfully');
+      } catch (error) {
+        console.error('❌ Failed to disconnect:', error);
       }
     },
 
-    toggleAudio: async () => {
-      const { localAudioEnabled } = get();
-      const newState = !localAudioEnabled;
-      await liveKitService.setMicrophoneEnabled(newState);
-      set({ localAudioEnabled: newState });
+    setMicrophoneEnabled: async (enabled: boolean) => {
+      try {
+        await liveKitService.setMicrophoneEnabled(enabled);
+        set({ localAudioEnabled: enabled });
+      } catch (error) {
+        console.error('Failed to set microphone state:', error);
+      }
     },
 
-    toggleVideo: async () => {
-      const { localVideoEnabled } = get();
-      const newState = !localVideoEnabled;
-      await liveKitService.setCameraEnabled(newState);
-      set({ localVideoEnabled: newState });
+    setVideoEnabled: async (enabled: boolean) => {
+      try {
+                  await liveKitService.setCameraEnabled(enabled);
+        set({ localVideoEnabled: enabled });
+      } catch (error) {
+        console.error('Failed to set video state:', error);
+      }
     },
 
     sendMessage: async (message: string) => {
@@ -217,9 +232,9 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
           content: message,
           timestamp: new Date().toISOString(),
         };
-        
+
         await liveKitService.sendData(JSON.stringify(messageData));
-        
+
         // Добавляем сообщение в локальный список
         set((state) => ({
           messages: [
@@ -249,4 +264,4 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
       track.detach();
     },
   };
-}); 
+});

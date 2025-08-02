@@ -1,9 +1,20 @@
 import { Room } from 'livekit-client';
 
+interface PermissionButton {
+  text: string;
+  rpc_on_click: string;
+}
+
+interface PermissionRequestData {
+  text: string;
+  buttons: PermissionButton[];
+  rpc_on_deny: string;
+}
+
 export interface OnboardingScreenData {
   screen_type: string;
   use_microphone: boolean;
-  data?: any;
+  data?: PermissionRequestData;
   analytics?: any;
 }
 
@@ -18,26 +29,34 @@ export class OnboardingService {
   private onRpcCommand?: (command: RpcCommand) => void;
 
   setRoom(room: Room) {
+    console.log('🔄 Setting room in OnboardingService:', room);
     this.room = room;
     this.setupEventHandlers();
   }
 
   setOnScreenUpdate(callback: (screenData: OnboardingScreenData) => void) {
+    console.log('🎯 Setting onScreenUpdate callback');
     this.onScreenUpdate = callback;
   }
 
   setOnRpcCommand(callback: (command: RpcCommand) => void) {
+    console.log('🎯 Setting onRpcCommand callback');
     this.onRpcCommand = callback;
   }
 
   private setupEventHandlers() {
-    if (!this.room) return;
+    if (!this.room) {
+      console.error('❌ Cannot setup event handlers: room is null');
+      return;
+    }
+
+    console.log('🔧 Setting up event handlers for room:', this.room);
 
     // Регистрируем RPC метод show-screen для получения экранов от агента
-    this.room.localParticipant.registerRpcMethod('show-screen', (data) => {
+    this.room.localParticipant.registerRpcMethod('show-screen', async (data) => {
       try {
         console.log('🎯 Received show-screen RPC from agent:', data);
-        
+
         // Парсим данные от агента
         let screenData;
         if (typeof data.payload === 'string') {
@@ -45,19 +64,43 @@ export class OnboardingService {
         } else {
           screenData = data.payload;
         }
-        
+
         console.log('📱 Parsed screen data:', screenData);
-        
+
         // Передаем данные экрана в колбэк
-        this.onScreenUpdate?.(screenData);
-        
-        console.log('✅ Screen data sent to onScreenUpdate callback');
-        
+        if (this.onScreenUpdate) {
+          console.log('✅ Calling onScreenUpdate callback with data:', screenData);
+          this.onScreenUpdate(screenData);
+        } else {
+          console.warn('⚠️ onScreenUpdate callback is not set');
+        }
+
         // Возвращаем успешный ответ агенту
         return JSON.stringify({ success: true });
       } catch (error) {
         console.error('❌ Error handling show-screen RPC:', error);
-        return JSON.stringify({ success: false, error: error.message });
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    // Новый RPC метод request_permissions
+    this.room.localParticipant.registerRpcMethod('request-permissions', async (data) => {
+      try {
+        let payload;
+        if (typeof data.payload === 'string') {
+          payload = JSON.parse(data.payload);
+        } else {
+          payload = data.payload;
+        }
+        // Передаём в onScreenUpdate экран с типом 'request_permissions'
+        this.onScreenUpdate?.({
+          screen_type: 'request-permissions',
+          use_microphone: false,
+          data: payload,
+        });
+        return JSON.stringify({ success: true });
+      } catch (error) {
+        return JSON.stringify({ success: false, error: (error as Error).message });
       }
     });
 
@@ -69,9 +112,9 @@ export class OnboardingService {
         const decoder = new TextDecoder();
         const text = decoder.decode(payload);
         const data = JSON.parse(text);
-        
+
         console.log('📡 Received data from agent:', data);
-        
+
         // Обработка различных типов сообщений от агента
         if (data.type === 'show_screen') {
           this.onScreenUpdate?.(data);
@@ -92,7 +135,7 @@ export class OnboardingService {
 
     try {
       console.log('Starting onboarding...');
-      
+
       // Вызываем RPC метод start_onboarding у агента
       await this.room.localParticipant.performRpc({
         destinationIdentity: '', // пустая строка означает, что RPC идет к агенту
@@ -175,15 +218,22 @@ export class OnboardingService {
     return this.sendRpcMethod('default-assistant-later-click', {});
   }
 
+  // Новый метод для отправки permission-result с нужным payload
+  async sendRequestPermissionsResult(): Promise<void> {
+    return this.sendRpcMethod('permission-result', {
+      permissions: ["microphone", "location"]
+    });
+  }
+
   // Базовый метод для отправки RPC команд
-  private async sendRpcMethod(method: string, data: any): Promise<void> {
+  async sendRpcMethod(method: string, data: any): Promise<void> {
     if (!this.room?.localParticipant) {
       throw new Error('Room not connected');
     }
 
     try {
       console.log(`Sending RPC method: ${method}`, data);
-      
+
       await this.room.localParticipant.performRpc({
         destinationIdentity: '', // пустая строка означает, что RPC идет к агенту
         method: method,
@@ -196,4 +246,4 @@ export class OnboardingService {
       throw error;
     }
   }
-} 
+}

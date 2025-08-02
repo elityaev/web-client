@@ -10,11 +10,11 @@ export class ApiService {
     try {
       // Получаем Firebase ID токен
       const firebaseIdToken = await this.firebaseService.getCurrentIdToken();
-      
+
       const response = await fetch(`${ASSISTANT_SERVER_URL}/livekit-token/`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json; charset=UTF8',
           'Authorization': `Bearer ${firebaseIdToken}`, // Используем Firebase ID токен
         },
         body: JSON.stringify(request),
@@ -26,7 +26,7 @@ export class ApiService {
           console.log('Firebase token expired, getting new one...');
           this.firebaseService.clearToken();
           const newFirebaseIdToken = await this.firebaseService.getIdToken();
-          
+
           const retryResponse = await fetch(`${ASSISTANT_SERVER_URL}/livekit-token/`, {
             method: 'POST',
             headers: {
@@ -35,16 +35,16 @@ export class ApiService {
             },
             body: JSON.stringify(request),
           });
-          
+
           if (!retryResponse.ok) {
             const errorText = await retryResponse.text();
             throw new Error(`Failed to get LiveKit token: ${retryResponse.status} ${retryResponse.statusText} - ${errorText}`);
           }
-          
+
           const data: TokenResponse = await retryResponse.json();
           return data.token;
         }
-        
+
         const errorText = await response.text();
         throw new Error(`Failed to get LiveKit token: ${response.status} ${response.statusText} - ${errorText}`);
       }
@@ -56,4 +56,4 @@ export class ApiService {
       throw error;
     }
   }
-} 
+}
