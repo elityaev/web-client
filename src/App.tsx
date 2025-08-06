@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAuthStore } from './stores/authStore';
-import { MainDashboard } from './components/MainDashboard';
+import { TestPage } from './components/TestPage';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 function App() {
@@ -71,7 +71,7 @@ function App() {
     );
   }
 
-  return <MainDashboard />;
+  return <TestPage />;
 }
 
 export default App; 

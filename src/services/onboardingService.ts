@@ -1,5 +1,31 @@
 import { Room } from 'livekit-client';
 
+interface RpcAction {
+  name: string;
+  payload?: string;
+}
+
+interface Permission {
+  type: string;
+  title: string;
+  subtitle: string;
+  icon_url: string;
+  rpc_on_allow?: RpcAction;
+  rpc_on_deny?: RpcAction;
+}
+
+interface Button {
+  text: string;
+  rpc_on_click?: RpcAction;
+}
+
+interface RequestPermissionsData {
+  text: string;
+  permissions: Permission[];
+  buttons: Button[];
+}
+
+// Legacy interface for backward compatibility
 interface PermissionButton {
   text: string;
   rpc_on_click: string;
@@ -14,7 +40,7 @@ interface PermissionRequestData {
 export interface OnboardingScreenData {
   screen_type: string;
   use_microphone: boolean;
-  data?: PermissionRequestData;
+  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData;
   analytics?: any;
 }
 
@@ -23,10 +49,58 @@ export interface RpcCommand {
   command_data?: any;
 }
 
+interface LocationInfo {
+  icon_url: string;
+  text: string;
+}
+
+interface Location {
+  lat: number;
+  lng: number;
+}
+
+interface WaypointResult {
+  id: string;
+  number: number;
+  label: string;
+  title: string;
+  subtitle: string;
+  info: LocationInfo[];
+  phone: string;
+  waypoint_number: number;
+  location: Location;
+  selected: boolean;
+  extended: boolean;
+  rpc_on_card_click?: RpcAction;
+  rpc_on_pin_click?: RpcAction;
+  rpc_on_go_click?: RpcAction;
+}
+
+interface AddWaypointData {
+  results: WaypointResult[];
+  final_points: WaypointResult[];
+  user_location: Location;
+  rpc_on_map_interaction?: RpcAction;
+}
+
+export interface PaywallData {
+  placement: string;
+  rpc_on_purchase?: RpcAction;
+  rpc_on_skip?: RpcAction;
+}
+
+// Export new types
+export type { RpcAction, Permission, Button, RequestPermissionsData, WaypointResult, AddWaypointData, LocationInfo, Location };
+
 export class OnboardingService {
   private room: Room | null = null;
   private onScreenUpdate?: (screenData: OnboardingScreenData) => void;
   private onRpcCommand?: (command: RpcCommand) => void;
+  private permissions: { microphone: boolean; location: boolean; push: boolean } = {
+    microphone: false,
+    location: false,
+    push: false
+  };
 
   setRoom(room: Room) {
     console.log('🔄 Setting room in OnboardingService:', room);
@@ -42,6 +116,11 @@ export class OnboardingService {
   setOnRpcCommand(callback: (command: RpcCommand) => void) {
     console.log('🎯 Setting onRpcCommand callback');
     this.onRpcCommand = callback;
+  }
+
+  setPermissions(permissions: { microphone: boolean; location: boolean; push: boolean }) {
+    console.log('🔧 Setting permissions:', permissions);
+    this.permissions = permissions;
   }
 
   private setupEventHandlers() {
@@ -104,7 +183,77 @@ export class OnboardingService {
       }
     });
 
-    console.log('🔧 RPC method "show-screen" registered successfully');
+    // Регистрируем RPC метод get-permissions для тестирования
+    this.room.localParticipant.registerRpcMethod('get-permissions', async (data) => {
+      try {
+        console.log('🎯 Received get-permissions RPC from agent:', data);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'get-permissions',
+            command_data: data
+          });
+        }
+
+        // Возвращаем текущие permissions
+        console.log('📤 Sending permissions response:', this.permissions);
+        return JSON.stringify(this.permissions);
+      } catch (error) {
+        console.error('❌ Error handling get-permissions RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    // Регистрируем RPC метод get-location
+    this.room.localParticipant.registerRpcMethod('get-location', async (data) => {
+      try {
+        console.log('🎯 Received get-location RPC from agent:', data);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'get-location',
+            command_data: data
+          });
+        }
+
+        // Возвращаем фиксированные координаты
+        const locationResponse = {
+          lat: 40.77784899,
+          lng: -74.146540831
+        };
+
+        console.log('📍 Sending location response:', locationResponse);
+        return JSON.stringify(locationResponse);
+      } catch (error) {
+        console.error('❌ Error handling get-location RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    // Регистрируем RPC метод open-navigator
+    this.room.localParticipant.registerRpcMethod('open-navigator', async (data) => {
+      try {
+        console.log('🎯 Received open-navigator RPC from agent:', data);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'open-navigator',
+            command_data: data
+          });
+        }
+
+        console.log('🧭 Opening navigation screen');
+        return JSON.stringify({ success: true, message: 'Navigation opened' });
+      } catch (error) {
+        console.error('❌ Error handling open-navigator RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    console.log('🔧 RPC methods registered successfully');
 
     // Обработка входящих данных от агента (для совместимости)
     this.room.on('dataReceived', (payload: Uint8Array) => {
@@ -119,7 +268,11 @@ export class OnboardingService {
         if (data.type === 'show_screen') {
           this.onScreenUpdate?.(data);
         } else if (data.type === 'rpc_command') {
-          this.onRpcCommand?.(data);
+          console.log('🎯 Processing RPC command:', data);
+          this.onRpcCommand?.({
+            method: data.method,
+            command_data: data.payload
+          });
         }
       } catch (error) {
         console.error('❌ Error parsing received data:', error);
@@ -232,18 +385,49 @@ export class OnboardingService {
     }
 
     try {
-      console.log(`Sending RPC method: ${method}`, data);
+      console.log(`🚀 Sending RPC method: ${method}`, data);
+      console.log(`📡 Room participants:`, Array.from(this.room.remoteParticipants.keys()));
 
-      await this.room.localParticipant.performRpc({
-        destinationIdentity: '', // пустая строка означает, что RPC идет к агенту
+      // Найдем агента среди участников
+      const agentParticipant = Array.from(this.room.remoteParticipants.values())
+        .find(p => p.identity.includes('agent') || p.identity.includes('assistant'));
+
+      const destinationIdentity = agentParticipant?.identity || '';
+
+      console.log(`🎯 Sending to destination: "${destinationIdentity}"`);
+
+      // Если data уже строка JSON, используем её как есть, иначе сериализуем
+      const payload = typeof data === 'string' ? data : JSON.stringify(data);
+      console.log(`📤 Final payload being sent:`, payload);
+
+      const result = await this.room.localParticipant.performRpc({
+        destinationIdentity: destinationIdentity,
         method: method,
-        payload: JSON.stringify(data),
+        payload: payload,
       });
 
-      console.log(`RPC method ${method} sent successfully`);
+      console.log(`✅ RPC method ${method} sent successfully, response:`, result);
     } catch (error) {
-      console.error(`Failed to send RPC method ${method}:`, error);
-      throw error;
+      console.error(`❌ Failed to send RPC method ${method}:`, error);
+
+      // Попробуем отправить через DataChannel как fallback
+      console.log(`🔄 Trying to send via DataChannel as fallback...`);
+      try {
+        const encoder = new TextEncoder();
+        // Аналогично для DataChannel
+        const rpcPayload = typeof data === 'string' ? data : JSON.stringify(data);
+        const fallbackData = encoder.encode(JSON.stringify({
+          type: 'rpc_request',
+          method: method,
+          data: rpcPayload
+        }));
+
+        await this.room.localParticipant.publishData(fallbackData, { reliable: true });
+        console.log(`✅ Sent via DataChannel successfully`);
+      } catch (fallbackError) {
+        console.error(`❌ DataChannel fallback also failed:`, fallbackError);
+        throw error;
+      }
     }
   }
 }

@@ -41,19 +41,34 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
   });
 
   liveKitService.setOnTrackSubscribed((track, publication, participant) => {
-    console.log('Track subscribed:', track.kind, participant.identity);
+    console.log('🎵 Track subscribed:', track.kind, 'from', participant.identity);
 
     if (track.kind === 'video') {
       // Автоматически прикрепляем видео к элементу
       const videoElement = document.getElementById('remote-video') as HTMLVideoElement;
       if (videoElement) {
         track.attach(videoElement);
+        console.log('📹 Video track attached to element');
+      } else {
+        console.warn('⚠️ Video element not found');
       }
     } else if (track.kind === 'audio') {
       // Автоматически прикрепляем аудио к элементу
       const audioElement = document.getElementById('remote-audio') as HTMLAudioElement;
       if (audioElement) {
         track.attach(audioElement);
+        console.log('🔊 Audio track attached to element');
+
+        // Убеждаемся что аудио не заглушено
+        audioElement.muted = false;
+        audioElement.volume = 1.0;
+
+        // Пытаемся запустить воспроизведение
+        audioElement.play().catch(e => {
+          console.warn('⚠️ Autoplay blocked, user interaction required:', e);
+        });
+      } else {
+        console.warn('⚠️ Audio element not found');
       }
     }
   });
@@ -140,11 +155,10 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
         set({ isConnecting: true });
 
         const tokenRequest = {
-          language: 'ru',
-          platform: 'android',
-          app_version: '1.0.0',
-          onboarding_done: !withOnboarding,
-          permissions: ['microphone'],
+          r: "WRvDNvFSNrVOn0wGskCma9ydJ0CYGGt8",
+          language: "en-US",
+          app_version: "0.0.30",
+          platform: "ios"
         };
 
         console.log('🎫 Requesting LiveKit token...');
@@ -218,7 +232,7 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
 
     setVideoEnabled: async (enabled: boolean) => {
       try {
-                  await liveKitService.setCameraEnabled(enabled);
+        await liveKitService.setCameraEnabled(enabled);
         set({ localVideoEnabled: enabled });
       } catch (error) {
         console.error('Failed to set video state:', error);

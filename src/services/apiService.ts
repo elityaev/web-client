@@ -15,7 +15,7 @@ export class ApiService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json; charset=UTF8',
-          'Authorization': `Bearer ${firebaseIdToken}`, // Используем Firebase ID токен
+          'Authorization': `Bearer ${firebaseIdToken}`,
         },
         body: JSON.stringify(request),
       });

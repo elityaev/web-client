@@ -18,7 +18,7 @@ export class FirebaseService {
   private constructor() {
     this.apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
     this.refreshToken = import.meta.env.VITE_FIREBASE_REFRESH_TOKEN;
-    
+
     if (!this.apiKey || !this.refreshToken) {
       throw new Error('Firebase API key or refresh token not found in environment variables');
     }
@@ -54,7 +54,7 @@ export class FirebaseService {
 
       const data: FirebaseTokenResponse = await response.json();
       this.currentIdToken = data.id_token;
-      
+
       console.log('Firebase ID token obtained successfully');
       return data.id_token;
     } catch (error) {

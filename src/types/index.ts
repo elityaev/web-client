@@ -1,8 +1,8 @@
 export interface TokenRequest {
+  r: string;
   language: string;
   platform: string;
   app_version: string;
-  onboarding_done: boolean;
 }
 
 export interface TokenResponse {

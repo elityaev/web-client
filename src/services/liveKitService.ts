@@ -1,9 +1,9 @@
-import { 
-  Room, 
-  RoomEvent, 
-  Track, 
-  RemoteTrack, 
-  RemoteTrackPublication, 
+import {
+  Room,
+  RoomEvent,
+  Track,
+  RemoteTrack,
+  RemoteTrackPublication,
   RemoteParticipant,
   LocalTrackPublication,
   LocalParticipant,
@@ -84,7 +84,7 @@ export class LiveKitService {
 
   async connect(token: string): Promise<void> {
     if (!this.room) throw new Error('Room not initialized');
-    
+
     this.onConnectionStateChanged?.('connecting');
     await this.room.connect(LIVEKIT_WS_URL, token);
   }
