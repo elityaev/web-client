@@ -310,6 +310,60 @@ export const TestPage: React.FC = () => {
         setCurrentScreen(mockScreenData);
     };
 
+    const simulateMainScreen = () => {
+        // Симулируем получение RPC show_screen с main
+        const { addReceivedRpcCommand } = useOnboardingStore.getState();
+        addReceivedRpcCommand('show_screen', {
+            screen_type: "main",
+            use_microphone: false,
+            data: {
+                text: "How can I help you?",
+                buttons: [
+                    {
+                        text: "Navigate",
+                        icon_url: "https://storage.va.ray.app/icon-navigate.png",
+                        rpc_on_click: {
+                            name: "navigate"
+                        }
+                    },
+                    {
+                        text: "Play music",
+                        icon_url: "https://storage.va.ray.app/icon-music.png",
+                        rpc_on_click: {
+                            name: "music"
+                        }
+                    }
+                ]
+            }
+        });
+
+        const mockScreenData = {
+            screen_type: "main",
+            use_microphone: false,
+            data: {
+                text: "How can I help you?",
+                buttons: [
+                    {
+                        text: "Navigate",
+                        icon_url: "https://storage.va.ray.app/icon-navigate.png",
+                        rpc_on_click: {
+                            name: "navigate"
+                        }
+                    },
+                    {
+                        text: "Play music",
+                        icon_url: "https://storage.va.ray.app/icon-music.png",
+                        rpc_on_click: {
+                            name: "music"
+                        }
+                    }
+                ]
+            }
+        };
+
+        setCurrentScreen(mockScreenData);
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 p-8">
             <div className="max-w-4xl mx-auto">
@@ -482,6 +536,13 @@ export const TestPage: React.FC = () => {
                             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
                         >
                             🧭 Тест Navigator
+                        </button>
+
+                        <button
+                            onClick={simulateMainScreen}
+                            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium"
+                        >
+                            🏠 Тест Main Screen
                         </button>
                     </div>
 

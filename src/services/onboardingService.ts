@@ -40,7 +40,7 @@ interface PermissionRequestData {
 export interface OnboardingScreenData {
   screen_type: string;
   use_microphone: boolean;
-  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData;
+  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData | MainScreenData;
   analytics?: any;
 }
 
@@ -87,6 +87,18 @@ export interface PaywallData {
   placement: string;
   rpc_on_purchase?: RpcAction;
   rpc_on_skip?: RpcAction;
+}
+
+export interface MainScreenData {
+  text: string;
+  buttons: Array<{
+    text: string;
+    icon_url?: string;
+    rpc_on_click: {
+      name: string;
+      payload?: any;
+    };
+  }>;
 }
 
 // Export new types
@@ -242,6 +254,14 @@ export class OnboardingService {
           this.onRpcCommand({
             method: 'open-navigator',
             command_data: data
+          });
+        }
+
+        // Показываем экран навигатора
+        if (this.onScreenUpdate) {
+          this.onScreenUpdate({
+            screen_type: 'navigator',
+            use_microphone: false
           });
         }
 
