@@ -1,4 +1,6 @@
 // Firebase API Service для получения ID токена
+import { getEnv } from '../utils/env';
+
 interface FirebaseTokenResponse {
   access_token: string;
   expires_in: string;
@@ -16,8 +18,8 @@ export class FirebaseService {
   private currentIdToken: string | null = null;
 
   private constructor() {
-    this.apiKey = import.meta.env.VITE_FIREBASE_API_KEY;
-    this.refreshToken = import.meta.env.VITE_FIREBASE_REFRESH_TOKEN;
+    this.apiKey = getEnv('VITE_FIREBASE_API_KEY');
+    this.refreshToken = getEnv('VITE_FIREBASE_REFRESH_TOKEN');
 
     if (!this.apiKey || !this.refreshToken) {
       throw new Error('Firebase API key or refresh token not found in environment variables');

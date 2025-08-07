@@ -9,8 +9,9 @@ import {
   LocalParticipant,
   createLocalTracks
 } from 'livekit-client';
+import { getEnv } from '../utils/env';
 
-const LIVEKIT_WS_URL = import.meta.env.VITE_LIVEKIT_WS_URL || 'ws://localhost:7880';
+const LIVEKIT_WS_URL = getEnv('VITE_LIVEKIT_WS_URL') || 'ws://localhost:7880';
 
 export class LiveKitService {
   private room: Room | null = null;

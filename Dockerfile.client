@@ -1,0 +1,37 @@
+# Build stage
+FROM node:18-alpine as build
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the application with production optimizations
+RUN npm run build
+
+# Production stage - serve static files
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install serve to serve static files
+RUN npm install -g serve
+
+# Copy built application
+COPY --from=build /app/dist ./dist
+
+# Copy environment script
+COPY env.sh ./env.sh
+RUN chmod +x ./env.sh
+
+# Expose port
+EXPOSE 3000
+
+# Start script that injects env vars and serves the app
+CMD ["sh", "-c", "./env.sh && serve -s dist -l 3000"]

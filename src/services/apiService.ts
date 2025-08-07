@@ -1,7 +1,26 @@
 import { TokenRequest, TokenResponse } from '../types';
 import { FirebaseService } from './firebaseService';
+import { getEnv } from '../utils/env';
+import * as CryptoJS from 'crypto-js';
 
-const ASSISTANT_SERVER_URL = import.meta.env.VITE_ASSISTANT_SERVER_URL || 'http://localhost:8000';
+const ASSISTANT_SERVER_URL = getEnv('VITE_ASSISTANT_SERVER_URL') || 'http://localhost:8000';
+const API_KEY = getEnv('VITE_API_KEY') || '';
+
+// Функция для генерации случайного значения r (до 32 символов)
+function generateRandomR(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < 32; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// Функция для создания HMAC-MD5 подписи
+function createHmacMd5(message: string, key: string): string {
+  const hmac = CryptoJS.HmacMD5(message, key);
+  return hmac.toString(CryptoJS.enc.Hex);
+}
 
 export class ApiService {
   private static firebaseService = FirebaseService.getInstance();
@@ -11,13 +30,29 @@ export class ApiService {
       // Получаем Firebase ID токен
       const firebaseIdToken = await this.firebaseService.getCurrentIdToken();
 
+      // Генерируем случайное значение r
+      const randomR = generateRandomR();
+
+      // Добавляем r в запрос
+      const requestWithR = { ...request, r: randomR };
+      const requestBody = JSON.stringify(requestWithR);
+
+      // Создаем HMAC-MD5 подпись
+      const xAuthHeader = createHmacMd5(requestBody, API_KEY);
+
+      console.log('🔐 Request body:', requestBody);
+      console.log('🔐 API Key length:', API_KEY.length);
+      console.log('🔐 X-Auth header:', xAuthHeader);
+      console.log('🔐 X-Auth length:', xAuthHeader.length);
+
       const response = await fetch(`${ASSISTANT_SERVER_URL}/livekit-token/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json; charset=UTF8',
           'Authorization': `Bearer ${firebaseIdToken}`,
+          'X-Auth': xAuthHeader,
         },
-        body: JSON.stringify(request),
+        body: requestBody,
       });
 
       if (!response.ok) {
@@ -27,13 +62,22 @@ export class ApiService {
           this.firebaseService.clearToken();
           const newFirebaseIdToken = await this.firebaseService.getIdToken();
 
+          // Генерируем новое случайное значение r для повторного запроса
+          const newRandomR = generateRandomR();
+          const retryRequestWithR = { ...request, r: newRandomR };
+          const retryRequestBody = JSON.stringify(retryRequestWithR);
+
+          // Создаем новую HMAC-MD5 подпись
+          const retryXAuthHeader = createHmacMd5(retryRequestBody, API_KEY);
+
           const retryResponse = await fetch(`${ASSISTANT_SERVER_URL}/livekit-token/`, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json',
+              'Content-Type': 'application/json; charset=UTF8',
               'Authorization': `Bearer ${newFirebaseIdToken}`,
+              'X-Auth': retryXAuthHeader,
             },
-            body: JSON.stringify(request),
+            body: retryRequestBody,
           });
 
           if (!retryResponse.ok) {

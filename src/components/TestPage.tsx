@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLiveKitStore } from '../stores/liveKitStore';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { OnboardingPanel } from './OnboardingPanel';
+import { LoginScreen } from './LoginScreen';
+import { getEnv } from '../utils/env';
 import { Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 export const TestPage: React.FC = () => {
+    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const [loginError, setLoginError] = useState<string>('');
+
     const {
         isConnected,
         isConnecting,
@@ -23,6 +28,28 @@ export const TestPage: React.FC = () => {
         setCurrentScreen,
         addSentRpcCommand
     } = useOnboardingStore();
+
+    const handleLogin = (username: string, password: string) => {
+        const envUsername = getEnv('VITE_USERNAME') || 'admin';
+        const envPassword = getEnv('VITE_PASSWORD') || 'password';
+
+        console.log('🔐 Login attempt:', { username, password });
+        console.log('🔐 Expected:', { envUsername, envPassword });
+        console.log('🔐 window._env_:', window._env_);
+
+        if (username === envUsername && password === envPassword) {
+            setIsAuthenticated(true);
+            setLoginError('');
+        } else {
+            setLoginError('Неверный логин или пароль');
+        }
+    };
+
+    const handleLogout = () => {
+        setIsAuthenticated(false);
+        setLoginError('');
+        disconnect();
+    };
 
     const handleConnect = async () => {
         try {
@@ -364,10 +391,23 @@ export const TestPage: React.FC = () => {
         setCurrentScreen(mockScreenData);
     };
 
+    // Если не авторизован, показываем экран логина
+    if (!isAuthenticated) {
+        return <LoginScreen onLogin={handleLogin} error={loginError} />;
+    }
+
     return (
         <div className="min-h-screen bg-gray-100 p-8">
             <div className="max-w-4xl mx-auto">
-                <h1 className="text-3xl font-bold text-center mb-8">Тест приложения с агентом</h1>
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold text-gray-900">Тест приложения с агентом</h1>
+                    <button
+                        onClick={handleLogout}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium"
+                    >
+                        Выйти
+                    </button>
+                </div>
 
                 {/* Скрытые элементы для воспроизведения аудио/видео от агента */}
                 <audio
@@ -496,54 +536,7 @@ export const TestPage: React.FC = () => {
                             </button>
                         )}
 
-                        <button
-                            onClick={simulateRequestPermissions}
-                            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium"
-                        >
-                            🧪 Тест Request Permissions
-                        </button>
 
-                        <button
-                            onClick={simulateGetLocation}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium"
-                        >
-                            📍 Тест Get Location
-                        </button>
-
-                        <button
-                            onClick={() => handleRpcMethod('open-navigator')}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
-                        >
-                            🧭 Тест Open Navigator
-                        </button>
-
-                        <button
-                            onClick={simulateAddWaypoint}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium"
-                        >
-                            🗺️ Тест Add Waypoint
-                        </button>
-
-                        <button
-                            onClick={simulatePaywall}
-                            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium"
-                        >
-                            💳 Тест Paywall
-                        </button>
-
-                        <button
-                            onClick={simulateNavigator}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
-                        >
-                            🧭 Тест Navigator
-                        </button>
-
-                        <button
-                            onClick={simulateMainScreen}
-                            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium"
-                        >
-                            🏠 Тест Main Screen
-                        </button>
                     </div>
 
                     {/* Информация о JSON теле запроса */}

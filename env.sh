@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# Заменяем переменные окружения в runtime
+# Это позволяет передавать env переменные в статическое приложение
+
+# Создаем файл с переменными окружения для фронтенда
+cat <<EOF > ./dist/env-config.js
+window._env_ = {
+  VITE_ASSISTANT_SERVER_URL: "${VITE_ASSISTANT_SERVER_URL:-}",
+  VITE_LIVEKIT_WS_URL: "${VITE_LIVEKIT_WS_URL:-}",
+  VITE_USERNAME: "${VITE_USERNAME:-}",
+  VITE_PASSWORD: "${VITE_PASSWORD:-}",
+  VITE_API_KEY: "${VITE_API_KEY:-}",
+  VITE_FIREBASE_API_KEY: "${VITE_FIREBASE_API_KEY:-}",
+  VITE_FIREBASE_AUTH_DOMAIN: "${VITE_FIREBASE_AUTH_DOMAIN:-}",
+  VITE_FIREBASE_PROJECT_ID: "${VITE_FIREBASE_PROJECT_ID:-}",
+  VITE_FIREBASE_STORAGE_BUCKET: "${VITE_FIREBASE_STORAGE_BUCKET:-}",
+  VITE_FIREBASE_MESSAGING_SENDER_ID: "${VITE_FIREBASE_MESSAGING_SENDER_ID:-}",
+  VITE_FIREBASE_APP_ID: "${VITE_FIREBASE_APP_ID:-}",
+  VITE_FIREBASE_REFRESH_TOKEN: "${VITE_FIREBASE_REFRESH_TOKEN:-}"
+};
+EOF
