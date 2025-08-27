@@ -79,7 +79,7 @@ export const TestPage: React.FC = () => {
         } catch (error: any) {
             console.error('❌ Failed to send RPC method:', method, error);
 
-            // Записываем неудачную отправку  
+            // Записываем неудачную отправку
             const errorMessage = error.message || 'Unknown error';
             addSentRpcCommand(method, data || {}, false, errorMessage);
 
@@ -322,16 +322,37 @@ export const TestPage: React.FC = () => {
     };
 
     const simulateNavigator = () => {
-        // Симулируем получение RPC show_screen с navigator
+        // Симулируем получение RPC open-navigator с payload данными
         const { addReceivedRpcCommand } = useOnboardingStore.getState();
-        addReceivedRpcCommand('show_screen', {
-            screen_type: "navigator",
-            use_microphone: false
-        });
 
+        const navigatorPayload = {
+            waypoints: [
+                {
+                    name: "Shell",
+                    location: {
+                        lat: 0.3842272948,
+                        lng: 95.8302357943
+                    }
+                },
+                {
+                    name: "Starbucks",
+                    location: {
+                        lat: 0.3842272948,
+                        lng: 95.8302357943
+                    }
+                }
+            ],
+            from_current_location: true
+        };
+
+        // Добавляем запись о полученной RPC команде
+        addReceivedRpcCommand('open-navigator', navigatorPayload);
+
+        // Устанавливаем экран навигатора с данными
         const mockScreenData = {
             screen_type: "navigator",
-            use_microphone: false
+            use_microphone: false,
+            data: navigatorPayload
         };
 
         setCurrentScreen(mockScreenData);
@@ -469,6 +490,30 @@ export const TestPage: React.FC = () => {
                                 <label htmlFor="push" className="ml-2 text-sm text-gray-500">
                                     🔔 Push notifications (always false)
                                 </label>
+                            </div>
+                        </div>
+
+                        <div className="mt-4 space-y-2">
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => {
+                                        setPermission('microphone', true);
+                                        setPermission('location', true);
+                                    }}
+                                    className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                                >
+                                    ✅ Разрешить все
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setPermission('microphone', false);
+                                        setPermission('location', false);
+                                        setPermission('push', false);
+                                    }}
+                                    className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                                >
+                                    ❌ Запретить все
+                                </button>
                             </div>
                         </div>
 
@@ -620,13 +665,16 @@ export const TestPage: React.FC = () => {
                                     key={index}
                                     className={`p-4 rounded-lg border-l-4 ${command.method === 'get-permissions'
                                         ? 'bg-green-50 border-green-500'
+                                        : command.method === 'open-navigator'
+                                        ? 'bg-purple-50 border-purple-500'
                                         : 'bg-blue-50 border-blue-500'
                                         }`}
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <h3 className="font-semibold text-lg">
                                             {command.method === 'get-permissions' ? '✅ get-permissions' :
-                                                command.method === 'get-location' ? '📍 get-location' : command.method}
+                                                command.method === 'get-location' ? '📍 get-location' :
+                                                command.method === 'open-navigator' ? '🧭 open-navigator' : command.method}
                                         </h3>
                                         <span className="text-sm text-gray-500">
                                             {command.timestamp.toLocaleTimeString()}

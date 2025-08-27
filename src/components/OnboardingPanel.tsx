@@ -44,7 +44,7 @@ export const OnboardingPanel: React.FC<OnboardingPanelProps> = ({ screenData, on
 
     // Handle navigator format
     if (screenData.screen_type === 'navigator') {
-        return <NavigatorScreen />;
+        return <NavigatorScreen data={screenData.data} />;
     }
 
     // Handle main format

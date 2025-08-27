@@ -37,10 +37,21 @@ interface PermissionRequestData {
   rpc_on_deny: string;
 }
 
+interface NavigatorData {
+  waypoints: Array<{
+    name: string;
+    location: {
+      lat: number;
+      lng: number;
+    };
+  }>;
+  from_current_location: boolean;
+}
+
 export interface OnboardingScreenData {
   screen_type: string;
   use_microphone: boolean;
-  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData | MainScreenData;
+  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData | MainScreenData | NavigatorData;
   analytics?: any;
 }
 
@@ -102,7 +113,7 @@ export interface MainScreenData {
 }
 
 // Export new types
-export type { RpcAction, Permission, Button, RequestPermissionsData, WaypointResult, AddWaypointData, LocationInfo, Location };
+export type { RpcAction, Permission, Button, RequestPermissionsData, WaypointResult, AddWaypointData, LocationInfo, Location, NavigatorData };
 
 export class OnboardingService {
   private room: Room | null = null;
@@ -132,7 +143,9 @@ export class OnboardingService {
 
   setPermissions(permissions: { microphone: boolean; location: boolean; push: boolean }) {
     console.log('🔧 Setting permissions:', permissions);
+    console.log('🔧 Previous permissions:', this.permissions);
     this.permissions = permissions;
+    console.log('🔧 New permissions set:', this.permissions);
   }
 
   private setupEventHandlers() {
@@ -199,6 +212,7 @@ export class OnboardingService {
     this.room.localParticipant.registerRpcMethod('get-permissions', async (data) => {
       try {
         console.log('🎯 Received get-permissions RPC from agent:', data);
+        console.log('🔍 Current permissions state:', this.permissions);
 
         // Показываем уведомление о получении запроса
         if (this.onRpcCommand) {
@@ -208,12 +222,42 @@ export class OnboardingService {
           });
         }
 
-        // Возвращаем текущие permissions
-        console.log('📤 Sending permissions response:', this.permissions);
-        return JSON.stringify(this.permissions);
+        // Проверяем есть ли хотя бы одно разрешение
+        const hasAnyPermission = Object.values(this.permissions).some(p => p === true);
+        console.log('🔍 Has any permission granted:', hasAnyPermission);
+
+        // Создаем несколько форматов ответа для тестирования
+        const defaultFormat = this.permissions;
+        const arrayFormat = Object.entries(this.permissions)
+          .filter(([_, granted]) => granted)
+          .map(([permission, _]) => permission);
+        const compactFormat = hasAnyPermission ? this.permissions : null;
+
+        console.log('📤 Default format:', defaultFormat);
+        console.log('📤 Array format (only granted):', arrayFormat);
+        console.log('📤 Compact format (null if no permissions):', compactFormat);
+
+        // Возвращаем основной формат
+        const response = JSON.stringify(defaultFormat);
+        console.log('📤 Sending permissions response:', response);
+        console.log('📤 Response type:', typeof response);
+        console.log('📤 Response length:', response.length);
+
+        // Если нет разрешений, возможно агент ожидает null или другой формат
+        if (!hasAnyPermission) {
+          console.log('⚠️ No permissions granted, agent might interpret this as None');
+          console.log('💡 Alternative formats to try:');
+          console.log('   - Array format:', JSON.stringify(arrayFormat));
+          console.log('   - Null format:', JSON.stringify(compactFormat));
+          console.log('   - Empty object:', JSON.stringify({}));
+        }
+
+        return response;
       } catch (error) {
         console.error('❌ Error handling get-permissions RPC:', error);
-        return JSON.stringify({ success: false, error: (error as Error).message });
+        const errorResponse = JSON.stringify({ success: false, error: (error as Error).message });
+        console.log('📤 Sending error response:', errorResponse);
+        return errorResponse;
       }
     });
 
@@ -231,10 +275,15 @@ export class OnboardingService {
         }
 
         // Возвращаем фиксированные координаты
+        // const locationResponse = {
+        //   lat: 40.77784899,
+        //   lng: -74.146540831
+        // };
+
         const locationResponse = {
-          lat: 40.77784899,
-          lng: -74.146540831
-        };
+            lat: 34.07044502254812,
+            lng: -118.40208915222966
+          };
 
         console.log('📍 Sending location response:', locationResponse);
         return JSON.stringify(locationResponse);
@@ -249,23 +298,34 @@ export class OnboardingService {
       try {
         console.log('🎯 Received open-navigator RPC from agent:', data);
 
+        // Парсим payload если он в виде строки
+        let payload;
+        if (typeof data.payload === 'string') {
+          payload = JSON.parse(data.payload);
+        } else {
+          payload = data.payload || data;
+        }
+
+        console.log('🧭 Parsed navigator payload:', payload);
+
         // Показываем уведомление о получении запроса
         if (this.onRpcCommand) {
           this.onRpcCommand({
             method: 'open-navigator',
-            command_data: data
+            command_data: payload
           });
         }
 
-        // Показываем экран навигатора
+        // Показываем экран навигатора с данными маршрута
         if (this.onScreenUpdate) {
           this.onScreenUpdate({
             screen_type: 'navigator',
-            use_microphone: false
+            use_microphone: false,
+            data: payload
           });
         }
 
-        console.log('🧭 Opening navigation screen');
+        console.log('🧭 Opening navigation screen with route data');
         return JSON.stringify({ success: true, message: 'Navigation opened' });
       } catch (error) {
         console.error('❌ Error handling open-navigator RPC:', error);
