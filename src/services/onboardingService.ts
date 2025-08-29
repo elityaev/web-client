@@ -333,6 +333,37 @@ export class OnboardingService {
       }
     });
 
+    // Регистрируем RPC метод set-avatar-state для управления состоянием аватара
+    this.room.localParticipant.registerRpcMethod('set-avatar-state', async (data) => {
+      try {
+        console.log('🎯 Received set-avatar-state RPC from agent:', data);
+
+        // Парсим payload если он в виде строки
+        let payload;
+        if (typeof data.payload === 'string') {
+          payload = JSON.parse(data.payload);
+        } else {
+          payload = data.payload || data;
+        }
+
+        console.log('👤 Parsed avatar state payload:', payload);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'set-avatar-state',
+            command_data: payload
+          });
+        }
+
+        console.log('👤 Avatar state updated:', payload);
+        return JSON.stringify({ success: true, message: 'Avatar state updated' });
+      } catch (error) {
+        console.error('❌ Error handling set-avatar-state RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
     console.log('🔧 RPC methods registered successfully');
 
     // Обработка входящих данных от агента (для совместимости)

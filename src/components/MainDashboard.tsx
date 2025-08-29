@@ -1,5 +1,6 @@
 import React from 'react';
 import { OnboardingPanel } from './OnboardingPanel';
+import { AvatarStateIndicator } from './AvatarStateIndicator';
 import { useOnboardingStore } from '../stores/onboardingStore';
 
 export const MainDashboard: React.FC = () => {
@@ -7,6 +8,7 @@ export const MainDashboard: React.FC = () => {
 
   return (
     <div className="container mx-auto p-4">
+      <AvatarStateIndicator />
       {currentScreen && (
         <OnboardingPanel
           screenData={currentScreen}

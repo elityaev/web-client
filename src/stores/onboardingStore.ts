@@ -18,6 +18,12 @@ interface OnboardingStore {
     push: boolean;
   };
 
+  // Avatar state
+  avatarState: {
+    isListening: boolean;
+    currentState: string | null;
+  };
+
   // Actions
   initializeWithRoom: (room: Room) => void;
   handleRpcMethod: (method: string, data?: any) => Promise<void>;
@@ -27,6 +33,8 @@ interface OnboardingStore {
   addSentRpcCommand: (method: string, data: any, success: boolean, error?: string) => void;
   setPermission: (permission: 'microphone' | 'location' | 'push', value: boolean) => void;
   sendPermissionsResponse: () => Promise<void>;
+  setAvatarState: (state: string) => void;
+  clearAvatarState: () => void;
 }
 
 export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
@@ -42,6 +50,11 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     microphone: false,
     location: false,
     push: false,
+  },
+
+  avatarState: {
+    isListening: false,
+    currentState: null,
   },
 
   initializeWithRoom: (room: Room) => {
@@ -81,6 +94,11 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         timestamp: new Date()
       }]
     }));
+
+    // Обработка специальных RPC команд
+    if (method === 'set-avatar-state' && data?.input) {
+      get().setAvatarState(data.input);
+    }
   },
 
   addSentRpcCommand: (method: string, data: any, success: boolean, error?: string) => {
@@ -120,5 +138,25 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
       console.error('❌ Failed to send permissions response:', error);
       set({ error: (error as Error).message });
     }
+  },
+
+  setAvatarState: (state: string) => {
+    console.log('👤 Setting avatar state:', state);
+    set((prev) => ({
+      avatarState: {
+        isListening: state === 'Listen',
+        currentState: state,
+      },
+    }));
+  },
+
+  clearAvatarState: () => {
+    console.log('👤 Clearing avatar state');
+    set((prev) => ({
+      avatarState: {
+        isListening: false,
+        currentState: null,
+      },
+    }));
   },
 }));

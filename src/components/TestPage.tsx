@@ -23,10 +23,13 @@ export const TestPage: React.FC = () => {
         sentRpcCommands,
         currentScreen,
         permissions,
+        avatarState,
         setPermission,
         sendPermissionsResponse,
         setCurrentScreen,
-        addSentRpcCommand
+        addSentRpcCommand,
+        setAvatarState,
+        clearAvatarState
     } = useOnboardingStore();
 
     const handleLogin = (username: string, password: string) => {
@@ -580,9 +583,54 @@ export const TestPage: React.FC = () => {
                                 Отключиться
                             </button>
                         )}
+                                        </div>
 
+                    {/* Тестовые кнопки для аватара */}
+                    {isConnected && (
+                        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                            <h3 className="text-sm font-semibold mb-3">Тест состояния аватара:</h3>
+                            <div className="flex gap-2 flex-wrap">
+                                <button
+                                    onClick={() => setAvatarState('Listen')}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded text-sm"
+                                >
+                                    🎧 Агент слушает
+                                </button>
+                                <button
+                                    onClick={() => setAvatarState('Thinking')}
+                                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded text-sm"
+                                >
+                                    🤔 Агент думает
+                                </button>
+                                <button
+                                    onClick={() => setAvatarState('Speaking')}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+                                >
+                                    🗣️ Агент говорит
+                                </button>
+                                <button
+                                    onClick={clearAvatarState}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm"
+                                >
+                                    ❌ Очистить состояние
+                                </button>
+                            </div>
 
-                    </div>
+                            {/* Отображение текущего состояния */}
+                            <div className="mt-3 p-2 bg-white rounded border">
+                                <div className="text-xs text-gray-600 mb-1">Текущее состояние:</div>
+                                <div className="text-sm font-medium">
+                                    {avatarState.isListening ? (
+                                        <span className="text-green-600">🎧 Слушает</span>
+                                    ) : avatarState.currentState ? (
+                                        <span className="text-blue-600">{avatarState.currentState}</span>
+                                    ) : (
+                                        <span className="text-gray-500">Нет активного состояния</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Информация о JSON теле запроса */}
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
@@ -667,6 +715,8 @@ export const TestPage: React.FC = () => {
                                         ? 'bg-green-50 border-green-500'
                                         : command.method === 'open-navigator'
                                         ? 'bg-purple-50 border-purple-500'
+                                        : command.method === 'set-avatar-state'
+                                        ? 'bg-pink-50 border-pink-500'
                                         : 'bg-blue-50 border-blue-500'
                                         }`}
                                 >
@@ -674,7 +724,8 @@ export const TestPage: React.FC = () => {
                                         <h3 className="font-semibold text-lg">
                                             {command.method === 'get-permissions' ? '✅ get-permissions' :
                                                 command.method === 'get-location' ? '📍 get-location' :
-                                                command.method === 'open-navigator' ? '🧭 open-navigator' : command.method}
+                                                command.method === 'open-navigator' ? '🧭 open-navigator' :
+                                                command.method === 'set-avatar-state' ? '👤 set-avatar-state' : command.method}
                                         </h3>
                                         <span className="text-sm text-gray-500">
                                             {command.timestamp.toLocaleTimeString()}
@@ -723,6 +774,25 @@ export const TestPage: React.FC = () => {
                                                 </pre>
                                                 <div className="text-xs text-blue-600 mt-1">
                                                     🗽 New York, NY (фиксированные координаты)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {command.method === 'set-avatar-state' && (
+                                        <div className="mt-3">
+                                            <div className="bg-purple-50 border border-purple-200 rounded p-3">
+                                                <div className="text-sm text-purple-800 font-medium mb-1">
+                                                    👤 Состояние аватара обновлено:
+                                                </div>
+                                                <pre className="text-xs text-purple-700">
+                                                    {JSON.stringify(command.data, null, 2)}
+                                                </pre>
+                                                <div className="text-xs text-purple-600 mt-1">
+                                                    {command.data?.input === 'Listen' ? '🎧 Агент теперь слушает' :
+                                                     command.data?.input === 'Thinking' ? '🤔 Агент думает' :
+                                                     command.data?.input === 'Speaking' ? '🗣️ Агент говорит' :
+                                                     `Состояние: ${command.data?.input}`}
                                                 </div>
                                             </div>
                                         </div>
