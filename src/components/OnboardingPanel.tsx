@@ -1,11 +1,12 @@
 import React from 'react';
-import { OnboardingScreenData, RpcAction, RequestPermissionsData, AddWaypointData, PaywallData, MainScreenData } from '../services/onboardingService';
+import { OnboardingScreenData, RpcAction, RequestPermissionsData, AddWaypointData, PaywallData, MainScreenData, MapRouteConfirmData } from '../services/onboardingService';
 import { Button } from './ui/Button';
 import { RequestPermissionsScreen } from './RequestPermissionsScreen';
 import { AddWaypointScreen } from './AddWaypointScreen';
 import { PaywallScreen } from './PaywallScreen';
 import { NavigatorScreen } from './NavigatorScreen';
 import { MainScreen } from './MainScreen';
+import { MapRouteConfirmScreen } from './MapRouteConfirmScreen';
 
 interface OnboardingPanelProps {
     screenData: OnboardingScreenData;
@@ -52,6 +53,14 @@ export const OnboardingPanel: React.FC<OnboardingPanelProps> = ({ screenData, on
         const data = screenData.data as MainScreenData;
         if ('text' in data && 'buttons' in data) {
             return <MainScreen data={data} onRpcAction={handleRpcAction} />;
+        }
+    }
+
+    // Handle map_route_confirm format
+    if (screenData.screen_type === 'map_route_confirm' && screenData.data) {
+        const data = screenData.data as MapRouteConfirmData;
+        if ('waypoints' in data && 'user_location' in data && 'rpc_on_change_click' in data && 'rpc_on_go_click' in data) {
+            return <MapRouteConfirmScreen data={data} onRpcAction={handleRpcAction} />;
         }
     }
 

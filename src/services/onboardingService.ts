@@ -51,7 +51,7 @@ interface NavigatorData {
 export interface OnboardingScreenData {
   screen_type: string;
   use_microphone: boolean;
-  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData | MainScreenData | NavigatorData;
+  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData | MainScreenData | NavigatorData | MapRouteConfirmData;
   analytics?: any;
 }
 
@@ -110,6 +110,29 @@ export interface MainScreenData {
       payload?: any;
     };
   }>;
+}
+
+export interface MapRouteConfirmData {
+  waypoints: Array<{
+    label: string;
+    name: string;
+    location: {
+      lat: number;
+      lng: number;
+    };
+  }>;
+  user_location: {
+    lat: number;
+    lng: number;
+  };
+  rpc_on_change_click: {
+    name: string;
+    payload?: any;
+  };
+  rpc_on_go_click: {
+    name: string;
+    payload?: any;
+  };
 }
 
 // Export new types
