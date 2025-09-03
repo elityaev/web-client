@@ -1,4 +1,5 @@
 import { Room } from 'livekit-client';
+import { useAuthStore } from '../stores/authStore';
 
 interface RpcAction {
   name: string;
@@ -210,6 +211,34 @@ export class OnboardingService {
       }
     });
 
+    // RPC метод get-premium
+    this.room.localParticipant.registerRpcMethod('get-premium', async (data) => {
+      try {
+        console.log('🎯 Received get-premium RPC from agent:', data);
+
+        // Получаем текущее состояние premium из authStore
+        const currentPremium = useAuthStore.getState().premium;
+        console.log('🔍 Current premium status:', currentPremium);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'get-premium',
+            command_data: data
+          });
+        }
+
+        // Возвращаем payload с текущим статусом premium
+        const response = { premium: currentPremium };
+        console.log('📤 Sending premium response:', response);
+
+        return JSON.stringify(response);
+      } catch (error) {
+        console.error('❌ Error handling get-premium RPC:', error);
+        return JSON.stringify({ premium: false, error: (error as Error).message });
+      }
+    });
+
     // Новый RPC метод request_permissions
     this.room.localParticipant.registerRpcMethod('request-permissions', async (data) => {
       try {
@@ -304,9 +333,9 @@ export class OnboardingService {
         // };
 
         const locationResponse = {
-            lat: 34.07044502254812,
-            lng: -118.40208915222966
-          };
+          lat: 34.07044502254812,
+          lng: -118.40208915222966
+        };
 
         console.log('📍 Sending location response:', locationResponse);
         return JSON.stringify(locationResponse);

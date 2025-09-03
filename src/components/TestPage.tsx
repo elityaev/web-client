@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLiveKitStore } from '../stores/liveKitStore';
 import { useOnboardingStore } from '../stores/onboardingStore';
+import { useAuthStore } from '../stores/authStore';
 import { OnboardingPanel } from './OnboardingPanel';
 import { LoginScreen } from './LoginScreen';
 import { getEnv } from '../utils/env';
@@ -31,6 +32,8 @@ export const TestPage: React.FC = () => {
         setAvatarState,
         clearAvatarState
     } = useOnboardingStore();
+
+    const { premium, setPremium } = useAuthStore();
 
     const handleLogin = (username: string, password: string) => {
         const envUsername = getEnv('VITE_USERNAME') || 'admin';
@@ -583,7 +586,7 @@ export const TestPage: React.FC = () => {
                                 Отключиться
                             </button>
                         )}
-                                        </div>
+                    </div>
 
                     {/* Тестовые кнопки для аватара */}
                     {isConnected && (
@@ -631,6 +634,31 @@ export const TestPage: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* Контроль Premium статуса */}
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h3 className="text-sm font-semibold mb-3">Premium статус:</h3>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${premium ? 'bg-green-500' : 'bg-gray-400'}`} />
+                                <span className="text-sm">
+                                    {premium ? 'Premium активен' : 'Premium неактивен'}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setPremium(!premium)}
+                                className={`px-4 py-2 rounded text-sm font-medium ${premium
+                                        ? 'bg-red-600 hover:bg-red-700 text-white'
+                                        : 'bg-green-600 hover:bg-green-700 text-white'
+                                    }`}
+                            >
+                                {premium ? 'Отключить' : 'Включить'}
+                            </button>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-600">
+                            Для тестирования RPC метода get-premium
+                        </div>
+                    </div>
 
                     {/* Информация о JSON теле запроса */}
                     <div className="mt-4 p-3 bg-gray-50 rounded-lg">
@@ -714,18 +742,18 @@ export const TestPage: React.FC = () => {
                                     className={`p-4 rounded-lg border-l-4 ${command.method === 'get-permissions'
                                         ? 'bg-green-50 border-green-500'
                                         : command.method === 'open-navigator'
-                                        ? 'bg-purple-50 border-purple-500'
-                                        : command.method === 'set-avatar-state'
-                                        ? 'bg-pink-50 border-pink-500'
-                                        : 'bg-blue-50 border-blue-500'
+                                            ? 'bg-purple-50 border-purple-500'
+                                            : command.method === 'set-avatar-state'
+                                                ? 'bg-pink-50 border-pink-500'
+                                                : 'bg-blue-50 border-blue-500'
                                         }`}
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <h3 className="font-semibold text-lg">
                                             {command.method === 'get-permissions' ? '✅ get-permissions' :
                                                 command.method === 'get-location' ? '📍 get-location' :
-                                                command.method === 'open-navigator' ? '🧭 open-navigator' :
-                                                command.method === 'set-avatar-state' ? '👤 set-avatar-state' : command.method}
+                                                    command.method === 'open-navigator' ? '🧭 open-navigator' :
+                                                        command.method === 'set-avatar-state' ? '👤 set-avatar-state' : command.method}
                                         </h3>
                                         <span className="text-sm text-gray-500">
                                             {command.timestamp.toLocaleTimeString()}
@@ -790,9 +818,9 @@ export const TestPage: React.FC = () => {
                                                 </pre>
                                                 <div className="text-xs text-purple-600 mt-1">
                                                     {command.data?.input === 'Listen' ? '🎧 Агент теперь слушает' :
-                                                     command.data?.input === 'Thinking' ? '🤔 Агент думает' :
-                                                     command.data?.input === 'Speaking' ? '🗣️ Агент говорит' :
-                                                     `Состояние: ${command.data?.input}`}
+                                                        command.data?.input === 'Thinking' ? '🤔 Агент думает' :
+                                                            command.data?.input === 'Speaking' ? '🗣️ Агент говорит' :
+                                                                `Состояние: ${command.data?.input}`}
                                                 </div>
                                             </div>
                                         </div>
