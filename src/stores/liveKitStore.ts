@@ -154,12 +154,16 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
         console.log('🔄 Starting connection process with onboarding:', withOnboarding);
         set({ isConnecting: true });
 
+        // Получаем platform из onboardingStore
+        const onboardingStore = useOnboardingStore.getState();
         const tokenRequest = {
           r: "WRvDNvFSNrVOn0wGskCma9ydJ0CYGGt8",
           language: "en-US",
           app_version: "0.0.30",
-          platform: "ios"
+          platform: onboardingStore.platform
         };
+
+        console.log('🔧 Using platform for token request:', onboardingStore.platform);
 
         console.log('🎫 Requesting LiveKit token...');
         const token = await ApiService.getLiveKitToken(tokenRequest);

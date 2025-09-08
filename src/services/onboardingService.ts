@@ -143,10 +143,11 @@ export class OnboardingService {
   private room: Room | null = null;
   private onScreenUpdate?: (screenData: OnboardingScreenData) => void;
   private onRpcCommand?: (command: RpcCommand) => void;
-  private permissions: { microphone: boolean; location: boolean; push: boolean } = {
+  private permissions: { microphone: boolean; location: boolean; push: boolean; apple_music: boolean } = {
     microphone: false,
     location: false,
-    push: false
+    push: false,
+    apple_music: false
   };
 
   setRoom(room: Room) {
@@ -165,7 +166,7 @@ export class OnboardingService {
     this.onRpcCommand = callback;
   }
 
-  setPermissions(permissions: { microphone: boolean; location: boolean; push: boolean }) {
+  setPermissions(permissions: { microphone: boolean; location: boolean; push: boolean; apple_music: boolean }) {
     console.log('🔧 Setting permissions:', permissions);
     console.log('🔧 Previous permissions:', this.permissions);
     this.permissions = permissions;
@@ -313,6 +314,98 @@ export class OnboardingService {
       }
     });
 
+    // Регистрируем RPC метод get-apple-music-subscription
+    this.room.localParticipant.registerRpcMethod('get-apple-music-subscription', async (data) => {
+      try {
+        console.log('🎯 Received get-apple-music-subscription RPC from agent:', data);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'get-apple-music-subscription',
+            command_data: data
+          });
+        }
+
+        // Получаем текущее состояние Apple Music subscription из store
+        const { useOnboardingStore } = await import('../stores/onboardingStore');
+        const currentState = useOnboardingStore.getState().appleMusicSubscriptionActive;
+        console.log('🔍 Current Apple Music subscription state:', currentState);
+
+        // Возвращаем payload с текущим статусом
+        const response = { active: currentState };
+        console.log('📤 Sending Apple Music subscription response:', response);
+
+        return JSON.stringify(response);
+      } catch (error) {
+        console.error('❌ Error handling get-apple-music-subscription RPC:', error);
+        return JSON.stringify({ active: false, error: (error as Error).message });
+      }
+    });
+
+    // Регистрируем RPC метод play-music-with-search
+    this.room.localParticipant.registerRpcMethod('play-music-with-search', async (data) => {
+      try {
+        console.log('🎯 Received play-music-with-search RPC from agent:', data);
+
+        // Парсим payload
+        let payload;
+        if (typeof data.payload === 'string') {
+          payload = JSON.parse(data.payload);
+        } else {
+          payload = data.payload;
+        }
+
+        console.log('🔍 Parsed music search payload:', payload);
+
+        // Валидация - хотя бы одно поле должно быть не null
+        const { app, song, album, artist } = payload;
+        const hasValidField = app !== null || song !== null || album !== null || artist !== null;
+
+        if (!hasValidField) {
+          console.error('❌ Invalid payload: at least one field (app, song, album, artist) must be non-null');
+          return JSON.stringify({
+            error: "At least one field (app, song, album, artist) must be non-null"
+          });
+        }
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'play-music-with-search',
+            command_data: data
+          });
+        }
+
+        // Получаем текущий трек из store
+        const { useOnboardingStore } = await import('../stores/onboardingStore');
+        const currentTrack = useOnboardingStore.getState().currentTrack;
+        console.log('🔍 Current track from store:', currentTrack);
+
+        // Формируем ответ
+        const response = {
+          current_item: {
+            song: currentTrack.song,
+            album: currentTrack.album,
+            artist: currentTrack.artist
+          }
+        };
+
+        console.log('📤 Sending play-music response:', response);
+        return JSON.stringify(response);
+      } catch (error) {
+        console.error('❌ Error handling play-music-with-search RPC:', error);
+        return JSON.stringify({
+          error: (error as Error).message,
+          current_item: {
+            song: null,
+            album: null,
+            artist: null
+          }
+        });
+      }
+    });
+
     // Регистрируем RPC метод get-location
     this.room.localParticipant.registerRpcMethod('get-location', async (data) => {
       try {
@@ -412,6 +505,162 @@ export class OnboardingService {
         return JSON.stringify({ success: true, message: 'Avatar state updated' });
       } catch (error) {
         console.error('❌ Error handling set-avatar-state RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    // Регистрируем RPC методы для управления музыкой
+    this.room.localParticipant.registerRpcMethod('next-track', async (data) => {
+      try {
+        console.log('🎯 Received next-track RPC from agent:', data);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'next-track',
+            command_data: data
+          });
+        }
+
+        // Обновляем состояние последней музыкальной команды
+        const { useOnboardingStore } = await import('../stores/onboardingStore');
+        useOnboardingStore.getState().setLastMusicCommand('next-track');
+
+        console.log('⏭️ Next track command processed');
+        return JSON.stringify({ success: true, message: 'Next track command received' });
+      } catch (error) {
+        console.error('❌ Error handling next-track RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    this.room.localParticipant.registerRpcMethod('previous-track', async (data) => {
+      try {
+        console.log('🎯 Received previous-track RPC from agent:', data);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'previous-track',
+            command_data: data
+          });
+        }
+
+        // Обновляем состояние последней музыкальной команды
+        const { useOnboardingStore } = await import('../stores/onboardingStore');
+        useOnboardingStore.getState().setLastMusicCommand('previous-track');
+
+        console.log('⏮️ Previous track command processed');
+        return JSON.stringify({ success: true, message: 'Previous track command received' });
+      } catch (error) {
+        console.error('❌ Error handling previous-track RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    this.room.localParticipant.registerRpcMethod('pause-track', async (data) => {
+      try {
+        console.log('🎯 Received pause-track RPC from agent:', data);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'pause-track',
+            command_data: data
+          });
+        }
+
+        // Обновляем состояние последней музыкальной команды
+        const { useOnboardingStore } = await import('../stores/onboardingStore');
+        useOnboardingStore.getState().setLastMusicCommand('pause-track');
+
+        console.log('⏸️ Pause track command processed');
+        return JSON.stringify({ success: true, message: 'Pause track command received' });
+      } catch (error) {
+        console.error('❌ Error handling pause-track RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    this.room.localParticipant.registerRpcMethod('resume-track', async (data) => {
+      try {
+        console.log('🎯 Received resume-track RPC from agent:', data);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'resume-track',
+            command_data: data
+          });
+        }
+
+        // Обновляем состояние последней музыкальной команды
+        const { useOnboardingStore } = await import('../stores/onboardingStore');
+        useOnboardingStore.getState().setLastMusicCommand('resume-track');
+
+        console.log('▶️ Resume track command processed');
+        return JSON.stringify({ success: true, message: 'Resume track command received' });
+      } catch (error) {
+        console.error('❌ Error handling resume-track RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    this.room.localParticipant.registerRpcMethod('play-music', async (data) => {
+      try {
+        console.log('🎯 Received play-music RPC from agent:', data);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'play-music',
+            command_data: data
+          });
+        }
+
+        // Обновляем состояние последней музыкальной команды
+        const { useOnboardingStore } = await import('../stores/onboardingStore');
+        useOnboardingStore.getState().setLastMusicCommand('play-music');
+
+        console.log('🎵 Play music command processed');
+        return JSON.stringify({ success: true, message: 'Play music command received' });
+      } catch (error) {
+        console.error('❌ Error handling play-music RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    this.room.localParticipant.registerRpcMethod('open-music-app', async (data) => {
+      try {
+        console.log('🎯 Received open-music-app RPC from agent:', data);
+
+        // Парсим payload если он в виде строки
+        let payload;
+        if (typeof data.payload === 'string') {
+          payload = JSON.parse(data.payload);
+        } else {
+          payload = data.payload || data;
+        }
+
+        console.log('🎵 Parsed open-music-app payload:', payload);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'open-music-app',
+            command_data: payload
+          });
+        }
+
+        // Обновляем состояние последней музыкальной команды с названием приложения
+        const { useOnboardingStore } = await import('../stores/onboardingStore');
+        const appName = payload?.app || 'unknown app';
+        useOnboardingStore.getState().setLastMusicCommand('open-music-app', appName);
+
+        console.log('📱 Open music app command processed:', appName);
+        return JSON.stringify({ success: true, message: `Open ${appName} command received` });
+      } catch (error) {
+        console.error('❌ Error handling open-music-app RPC:', error);
         return JSON.stringify({ success: false, error: (error as Error).message });
       }
     });

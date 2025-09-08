@@ -16,12 +16,33 @@ interface OnboardingStore {
     microphone: boolean;
     location: boolean;
     push: boolean;
+    apple_music: boolean;
+  };
+
+  // Platform setting for token request
+  platform: 'ios' | 'android';
+
+  // Apple Music subscription state
+  appleMusicSubscriptionActive: boolean;
+
+  // Current playing track state
+  currentTrack: {
+    song: string | null;
+    album: string | null;
+    artist: string | null;
   };
 
   // Avatar state
   avatarState: {
     isListening: boolean;
     currentState: string | null;
+  };
+
+  // Music control state
+  lastMusicCommand: {
+    command: string | null;
+    app: string | null;
+    timestamp: Date | null;
   };
 
   // Actions
@@ -31,10 +52,14 @@ interface OnboardingStore {
   setError: (error: string | null) => void;
   addReceivedRpcCommand: (method: string, data: any) => void;
   addSentRpcCommand: (method: string, data: any, success: boolean, error?: string) => void;
-  setPermission: (permission: 'microphone' | 'location' | 'push', value: boolean) => void;
+  setPermission: (permission: 'microphone' | 'location' | 'push' | 'apple_music', value: boolean) => void;
   sendPermissionsResponse: () => Promise<void>;
+  setPlatform: (platform: 'ios' | 'android') => void;
+  setAppleMusicSubscriptionActive: (active: boolean) => void;
+  setCurrentTrack: (track: { song: string | null; album: string | null; artist: string | null }) => void;
   setAvatarState: (state: string) => void;
   clearAvatarState: () => void;
+  setLastMusicCommand: (command: string, app?: string) => void;
 }
 
 export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
@@ -47,14 +72,31 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   sentRpcCommands: [],
 
   permissions: {
-    microphone: false,
-    location: false,
-    push: false,
+    microphone: true,
+    location: true,
+    push: true,
+    apple_music: true,
+  },
+
+  platform: 'ios',
+
+  appleMusicSubscriptionActive: true,
+
+  currentTrack: {
+    song: "Enter Sandman",
+    album: "Metallica",
+    artist: "Metallica"
   },
 
   avatarState: {
     isListening: false,
     currentState: null,
+  },
+
+  lastMusicCommand: {
+    command: null,
+    app: null,
+    timestamp: null,
   },
 
   initializeWithRoom: (room: Room) => {
@@ -87,13 +129,18 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   },
 
   addReceivedRpcCommand: (method: string, data: any) => {
-    set((state) => ({
-      receivedRpcCommands: [...state.receivedRpcCommands, {
+    set((state) => {
+      const newCommand = {
         method,
         data,
         timestamp: new Date()
-      }]
-    }));
+      };
+      // Оставляем только последнюю команду
+      const updatedCommands = [...state.receivedRpcCommands, newCommand].slice(-1);
+      return {
+        receivedRpcCommands: updatedCommands
+      };
+    });
 
     // Обработка специальных RPC команд
     if (method === 'set-avatar-state' && data?.input) {
@@ -102,18 +149,23 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   },
 
   addSentRpcCommand: (method: string, data: any, success: boolean, error?: string) => {
-    set((state) => ({
-      sentRpcCommands: [...state.sentRpcCommands, {
+    set((state) => {
+      const newCommand = {
         method,
         data,
         success,
         error,
         timestamp: new Date()
-      }]
-    }));
+      };
+      // Оставляем только последнюю команду
+      const updatedCommands = [...state.sentRpcCommands, newCommand].slice(-1);
+      return {
+        sentRpcCommands: updatedCommands
+      };
+    });
   },
 
-  setPermission: (permission: 'microphone' | 'location' | 'push', value: boolean) => {
+  setPermission: (permission: 'microphone' | 'location' | 'push' | 'apple_music', value: boolean) => {
     set((state) => {
       const newPermissions = {
         ...state.permissions,
@@ -140,6 +192,21 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     }
   },
 
+  setPlatform: (platform: 'ios' | 'android') => {
+    console.log('🔧 Setting platform:', platform);
+    set({ platform });
+  },
+
+  setAppleMusicSubscriptionActive: (active: boolean) => {
+    console.log('🎵 Setting Apple Music subscription active:', active);
+    set({ appleMusicSubscriptionActive: active });
+  },
+
+  setCurrentTrack: (track: { song: string | null; album: string | null; artist: string | null }) => {
+    console.log('🎵 Setting current track:', track);
+    set({ currentTrack: track });
+  },
+
   setAvatarState: (state: string) => {
     console.log('👤 Setting avatar state:', state);
     set((prev) => ({
@@ -158,5 +225,16 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         currentState: null,
       },
     }));
+  },
+
+  setLastMusicCommand: (command: string, app?: string) => {
+    console.log('🎵 Setting last music command:', command, app ? `(app: ${app})` : '');
+    set({
+      lastMusicCommand: {
+        command,
+        app: app || null,
+        timestamp: new Date(),
+      },
+    });
   },
 }));

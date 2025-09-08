@@ -24,8 +24,15 @@ export const TestPage: React.FC = () => {
         sentRpcCommands,
         currentScreen,
         permissions,
+        platform,
+        appleMusicSubscriptionActive,
+        currentTrack,
         avatarState,
+        lastMusicCommand,
         setPermission,
+        setPlatform,
+        setAppleMusicSubscriptionActive,
+        setCurrentTrack,
         sendPermissionsResponse,
         setCurrentScreen,
         addSentRpcCommand,
@@ -451,86 +458,224 @@ export const TestPage: React.FC = () => {
                     style={{ display: 'none' }}
                 />
 
-                {/* Панель настройки разрешений */}
-                {!isConnected && (
-                    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                        <h2 className="text-xl font-semibold mb-4">Настройка разрешений</h2>
-                        <p className="text-gray-600 mb-4">Выберите разрешения которые будут отправлены в ответе на get-permissions:</p>
+                {/* Единая панель управления состояниями */}
+                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                    <h2 className="text-xl font-semibold mb-4">🎛️ Панель управления состояниями</h2>
+                    <p className="text-gray-600 mb-6">Все настройки для RPC ответов и токенов в одном месте:</p>
 
-                        <div className="space-y-3">
-                            <div className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    id="microphone"
-                                    checked={permissions.microphone}
-                                    onChange={(e) => setPermission('microphone', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <label htmlFor="microphone" className="ml-2 text-sm font-medium text-gray-900">
-                                    🎤 Microphone access
-                                </label>
-                            </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Левая колонка - Разрешения */}
+                        <div>
+                            <h3 className="text-lg font-semibold mb-3">📋 Разрешения (get-permissions)</h3>
+                            <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="microphone"
+                                        checked={permissions.microphone}
+                                        onChange={(e) => setPermission('microphone', e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="microphone" className="ml-2 text-sm font-medium text-gray-900">
+                                        🎤 Microphone access
+                                    </label>
+                                </div>
 
-                            <div className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    id="location"
-                                    checked={permissions.location}
-                                    onChange={(e) => setPermission('location', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <label htmlFor="location" className="ml-2 text-sm font-medium text-gray-900">
-                                    📍 Location access
-                                </label>
-                            </div>
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="location"
+                                        checked={permissions.location}
+                                        onChange={(e) => setPermission('location', e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="location" className="ml-2 text-sm font-medium text-gray-900">
+                                        📍 Location access
+                                    </label>
+                                </div>
 
-                            <div className="flex items-center">
-                                <input
-                                    type="checkbox"
-                                    id="push"
-                                    checked={permissions.push}
-                                    onChange={(e) => setPermission('push', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                    disabled
-                                />
-                                <label htmlFor="push" className="ml-2 text-sm text-gray-500">
-                                    🔔 Push notifications (always false)
-                                </label>
-                            </div>
-                        </div>
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="push"
+                                        checked={permissions.push}
+                                        onChange={(e) => setPermission('push', e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="push" className="ml-2 text-sm font-medium text-gray-900">
+                                        🔔 Push notifications
+                                    </label>
+                                </div>
 
-                        <div className="mt-4 space-y-2">
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => {
-                                        setPermission('microphone', true);
-                                        setPermission('location', true);
-                                    }}
-                                    className="px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
-                                >
-                                    ✅ Разрешить все
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setPermission('microphone', false);
-                                        setPermission('location', false);
-                                        setPermission('push', false);
-                                    }}
-                                    className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
-                                >
-                                    ❌ Запретить все
-                                </button>
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="apple_music"
+                                        checked={permissions.apple_music}
+                                        onChange={(e) => setPermission('apple_music', e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                    />
+                                    <label htmlFor="apple_music" className="ml-2 text-sm font-medium text-gray-900">
+                                        🎵 Apple Music access
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                            <h3 className="text-sm font-semibold mb-2">Payload для ответа:</h3>
-                            <pre className="text-xs text-gray-700 overflow-x-auto">
-                                {JSON.stringify(permissions, null, 2)}
-                            </pre>
+                        {/* Правая колонка - Остальные настройки */}
+                        <div className="space-y-4">
+                            {/* Платформа */}
+                            <div>
+                                <h3 className="text-lg font-semibold mb-3">📱 Платформа (token request)</h3>
+                                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                    <div className="flex items-center">
+                                        <input
+                                            type="radio"
+                                            id="platform-ios"
+                                            name="platform"
+                                            value="ios"
+                                            checked={platform === 'ios'}
+                                            onChange={(e) => setPlatform(e.target.value as 'ios' | 'android')}
+                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="platform-ios" className="ml-2 text-sm font-medium text-gray-900">
+                                            📱 iOS
+                                        </label>
+                                    </div>
+
+                                    <div className="flex items-center">
+                                        <input
+                                            type="radio"
+                                            id="platform-android"
+                                            name="platform"
+                                            value="android"
+                                            checked={platform === 'android'}
+                                            onChange={(e) => setPlatform(e.target.value as 'ios' | 'android')}
+                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="platform-android" className="ml-2 text-sm font-medium text-gray-900">
+                                            🤖 Android
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Премиум и Apple Music */}
+                            <div>
+                                <h3 className="text-lg font-semibold mb-3">💎 Статусы подписок</h3>
+                                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                    <div className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            id="premium-status"
+                                            checked={premium}
+                                            onChange={(e) => setPremium(e.target.checked)}
+                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="premium-status" className="ml-2 text-sm font-medium text-gray-900">
+                                            ⭐ Premium статус (get-premium)
+                                        </label>
+                                    </div>
+
+                                    <div className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            id="apple-music-subscription-unified"
+                                            checked={appleMusicSubscriptionActive}
+                                            onChange={(e) => setAppleMusicSubscriptionActive(e.target.checked)}
+                                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                        />
+                                        <label htmlFor="apple-music-subscription-unified" className="ml-2 text-sm font-medium text-gray-900">
+                                            🎵 Apple Music подписка (get-apple-music-subscription)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Текущий трек */}
+                            <div>
+                                <h3 className="text-lg font-semibold mb-3">🎵 Текущий трек (play-music-with-search)</h3>
+                                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Песня</label>
+                                            <input
+                                                type="text"
+                                                value={currentTrack.song || ''}
+                                                onChange={(e) => setCurrentTrack({
+                                                    ...currentTrack,
+                                                    song: e.target.value || null
+                                                })}
+                                                placeholder="Enter Sandman"
+                                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Альбом</label>
+                                            <input
+                                                type="text"
+                                                value={currentTrack.album || ''}
+                                                onChange={(e) => setCurrentTrack({
+                                                    ...currentTrack,
+                                                    album: e.target.value || null
+                                                })}
+                                                placeholder="Metallica"
+                                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-gray-700 mb-1">Исполнитель</label>
+                                            <input
+                                                type="text"
+                                                value={currentTrack.artist || ''}
+                                                onChange={(e) => setCurrentTrack({
+                                                    ...currentTrack,
+                                                    artist: e.target.value || null
+                                                })}
+                                                placeholder="Metallica"
+                                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                )}
+
+                    {/* Кнопки быстрого управления */}
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                        <div className="flex gap-3 justify-center">
+                            <button
+                                onClick={() => {
+                                    setPermission('microphone', true);
+                                    setPermission('location', true);
+                                    setPermission('push', true);
+                                    setPermission('apple_music', true);
+                                    setPremium(true);
+                                    setAppleMusicSubscriptionActive(true);
+                                }}
+                                className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                            >
+                                ✅ Включить всё
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPermission('microphone', false);
+                                    setPermission('location', false);
+                                    setPermission('push', false);
+                                    setPermission('apple_music', false);
+                                    setPremium(false);
+                                    setAppleMusicSubscriptionActive(false);
+                                }}
+                                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+                            >
+                                ❌ Выключить всё
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+
 
                 {/* Панель подключения */}
                 <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -648,8 +793,8 @@ export const TestPage: React.FC = () => {
                             <button
                                 onClick={() => setPremium(!premium)}
                                 className={`px-4 py-2 rounded text-sm font-medium ${premium
-                                        ? 'bg-red-600 hover:bg-red-700 text-white'
-                                        : 'bg-green-600 hover:bg-green-700 text-white'
+                                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                                    : 'bg-green-600 hover:bg-green-700 text-white'
                                     }`}
                             >
                                 {premium ? 'Отключить' : 'Включить'}
@@ -658,6 +803,38 @@ export const TestPage: React.FC = () => {
                         <div className="mt-2 text-xs text-gray-600">
                             Для тестирования RPC метода get-premium
                         </div>
+                    </div>
+
+                    {/* Индикатор музыкальных команд */}
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h3 className="text-sm font-semibold mb-3">🎵 Последняя музыкальная команда:</h3>
+                        {lastMusicCommand.command ? (
+                            <div className="bg-white p-3 rounded border">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
+                                    <span className="text-sm font-medium">
+                                        {lastMusicCommand.command === 'next-track' && '⏭️ Следующий трек'}
+                                        {lastMusicCommand.command === 'previous-track' && '⏮️ Предыдущий трек'}
+                                        {lastMusicCommand.command === 'pause-track' && '⏸️ Пауза'}
+                                        {lastMusicCommand.command === 'resume-track' && '▶️ Воспроизведение'}
+                                        {lastMusicCommand.command === 'play-music' && '🎵 Включить музыку'}
+                                        {lastMusicCommand.command === 'open-music-app' && `📱 Открыть ${lastMusicCommand.app || 'приложение'}`}
+                                    </span>
+                                </div>
+                                {lastMusicCommand.app && lastMusicCommand.command === 'open-music-app' && (
+                                    <div className="text-xs text-blue-600 mb-1">
+                                        Приложение: {lastMusicCommand.app}
+                                    </div>
+                                )}
+                                <div className="text-xs text-gray-500">
+                                    {lastMusicCommand.timestamp?.toLocaleTimeString()}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-sm text-gray-500 bg-white p-3 rounded border">
+                                Музыкальные команды пока не получены
+                            </div>
+                        )}
                     </div>
 
                     {/* Информация о JSON теле запроса */}
@@ -753,7 +930,13 @@ export const TestPage: React.FC = () => {
                                             {command.method === 'get-permissions' ? '✅ get-permissions' :
                                                 command.method === 'get-location' ? '📍 get-location' :
                                                     command.method === 'open-navigator' ? '🧭 open-navigator' :
-                                                        command.method === 'set-avatar-state' ? '👤 set-avatar-state' : command.method}
+                                                        command.method === 'set-avatar-state' ? '👤 set-avatar-state' :
+                                                            command.method === 'next-track' ? '⏭️ next-track' :
+                                                                command.method === 'previous-track' ? '⏮️ previous-track' :
+                                                                    command.method === 'pause-track' ? '⏸️ pause-track' :
+                                                                        command.method === 'resume-track' ? '▶️ resume-track' :
+                                                                            command.method === 'play-music' ? '🎵 play-music' :
+                                                                                command.method === 'open-music-app' ? '📱 open-music-app' : command.method}
                                         </h3>
                                         <span className="text-sm text-gray-500">
                                             {command.timestamp.toLocaleTimeString()}
@@ -821,6 +1004,41 @@ export const TestPage: React.FC = () => {
                                                         command.data?.input === 'Thinking' ? '🤔 Агент думает' :
                                                             command.data?.input === 'Speaking' ? '🗣️ Агент говорит' :
                                                                 `Состояние: ${command.data?.input}`}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {(command.method === 'next-track' || command.method === 'previous-track' ||
+                                        command.method === 'pause-track' || command.method === 'resume-track' ||
+                                        command.method === 'play-music') && (
+                                            <div className="mt-3">
+                                                <div className="bg-green-50 border border-green-200 rounded p-3">
+                                                    <div className="text-sm text-green-800 font-medium mb-1">
+                                                        🎵 Музыкальная команда получена:
+                                                    </div>
+                                                    <div className="text-xs text-green-600 mt-1">
+                                                        {command.method === 'next-track' && '⏭️ Переключение на следующий трек'}
+                                                        {command.method === 'previous-track' && '⏮️ Переключение на предыдущий трек'}
+                                                        {command.method === 'pause-track' && '⏸️ Пауза воспроизведения'}
+                                                        {command.method === 'resume-track' && '▶️ Возобновление воспроизведения'}
+                                                        {command.method === 'play-music' && '🎵 Начало воспроизведения музыки'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                    {command.method === 'open-music-app' && (
+                                        <div className="mt-3">
+                                            <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                                                <div className="text-sm text-blue-800 font-medium mb-1">
+                                                    📱 Команда открытия музыкального приложения:
+                                                </div>
+                                                <pre className="text-xs text-blue-700">
+                                                    {JSON.stringify(command.data, null, 2)}
+                                                </pre>
+                                                <div className="text-xs text-blue-600 mt-1">
+                                                    Открыть приложение: {command.data?.app || 'неизвестное приложение'}
                                                 </div>
                                             </div>
                                         </div>

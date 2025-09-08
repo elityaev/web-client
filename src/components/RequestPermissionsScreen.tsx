@@ -1,5 +1,6 @@
 import React from 'react';
 import { RequestPermissionsData, RpcAction } from '../services/onboardingService';
+import { useOnboardingStore } from '../stores/onboardingStore';
 
 interface RequestPermissionsScreenProps {
     data: RequestPermissionsData;
@@ -10,9 +11,27 @@ export const RequestPermissionsScreen: React.FC<RequestPermissionsScreenProps> =
     data,
     onRpcAction
 }) => {
+    const { setPermission } = useOnboardingStore();
+
     const handleRpcAction = (action: RpcAction) => {
         console.log('🎯 Sending RPC action:', action);
         onRpcAction(action);
+    };
+
+    const handleContinueClick = (action: RpcAction) => {
+        console.log('🎯 Continue button clicked, updating permissions for requested types');
+
+        // Переключаем в true разрешения для всех типов в списке permissions
+        data.permissions.forEach(permission => {
+            if (permission.type === 'microphone' || permission.type === 'location' ||
+                permission.type === 'push' || permission.type === 'apple_music') {
+                console.log(`✅ Setting ${permission.type} permission to true`);
+                setPermission(permission.type as 'microphone' | 'location' | 'push' | 'apple_music', true);
+            }
+        });
+
+        // Отправляем RPC
+        handleRpcAction(action);
     };
 
     return (
@@ -33,6 +52,7 @@ export const RequestPermissionsScreen: React.FC<RequestPermissionsScreenProps> =
                                 {permission.type === 'location' && '📍'}
                                 {permission.type === 'camera' && '📷'}
                                 {permission.type === 'notifications' && '🔔'}
+                                {permission.type === 'apple_music' && '🎵'}
                             </div>
 
                             {/* Permission info */}
@@ -72,7 +92,17 @@ export const RequestPermissionsScreen: React.FC<RequestPermissionsScreenProps> =
                     {data.buttons.map((button, index) => (
                         <button
                             key={index}
-                            onClick={() => button.rpc_on_click && handleRpcAction(button.rpc_on_click)}
+                            onClick={() => {
+                                if (button.rpc_on_click) {
+                                    // Если это кнопка Continue, обновляем разрешения
+                                    if (button.text.toLowerCase().includes('continue') ||
+                                        button.text.toLowerCase().includes('продолжить')) {
+                                        handleContinueClick(button.rpc_on_click);
+                                    } else {
+                                        handleRpcAction(button.rpc_on_click);
+                                    }
+                                }
+                            }}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium"
                         >
                             {button.text}
