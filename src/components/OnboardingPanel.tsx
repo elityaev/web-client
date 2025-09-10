@@ -1,11 +1,12 @@
 import React from 'react';
-import { OnboardingScreenData, RpcAction, RequestPermissionsData, AddWaypointData, PaywallData, MainScreenData, MapRouteConfirmData } from '../services/onboardingService';
+import { OnboardingScreenData, RpcAction, RequestPermissionsData, AddWaypointData, PaywallData, MainScreenData, MapRouteConfirmData, ChooseMusicAppData } from '../services/onboardingService';
 import { Button } from './ui/Button';
 import { RequestPermissionsScreen } from './RequestPermissionsScreen';
 import { AddWaypointScreen } from './AddWaypointScreen';
 import { PaywallScreen } from './PaywallScreen';
 import { NavigatorScreen } from './NavigatorScreen';
 import { MainScreen } from './MainScreen';
+import { ChooseMusicAppScreen } from './ChooseMusicAppScreen';
 import { MapRouteConfirmScreen } from './MapRouteConfirmScreen';
 
 interface OnboardingPanelProps {
@@ -53,6 +54,14 @@ export const OnboardingPanel: React.FC<OnboardingPanelProps> = ({ screenData, on
         const data = screenData.data as MainScreenData;
         if ('text' in data && 'buttons' in data) {
             return <MainScreen data={data} onRpcAction={handleRpcAction} />;
+        }
+    }
+
+    // Handle choose_music_app format
+    if (screenData.screen_type === 'choose_music_app' && screenData.data) {
+        const data = screenData.data as ChooseMusicAppData;
+        if ('text' in data && 'apps' in data) {
+            return <ChooseMusicAppScreen data={data} onRpcAction={handleRpcAction} />;
         }
     }
 

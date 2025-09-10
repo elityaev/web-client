@@ -83,7 +83,9 @@ export const TestPage: React.FC = () => {
     const handleRpcMethod = async (method: string, data?: any) => {
         try {
             const { onboardingService } = useOnboardingStore.getState();
-            console.log('🚀 Sending RPC method:', method, 'with data:', data);
+            console.log('🚀 TestPage Sending RPC method:', method, 'with data:', data);
+            console.log('🚀 TestPage Data type:', typeof data);
+            console.log('🚀 TestPage Data JSON:', JSON.stringify(data));
             await onboardingService.sendRpcMethod(method, data || {});
             console.log('✅ RPC method sent successfully:', method, data);
 
@@ -416,6 +418,66 @@ export const TestPage: React.FC = () => {
                         icon_url: "https://storage.va.ray.app/icon-music.png",
                         rpc_on_click: {
                             name: "music"
+                        }
+                    }
+                ]
+            }
+        };
+
+        setCurrentScreen(mockScreenData);
+    };
+
+    const simulateChooseMusicApp = () => {
+        // Симулируем получение RPC show_screen с choose_music_app
+        const { addReceivedRpcCommand } = useOnboardingStore.getState();
+        const chooseMusicAppPayload = {
+            screen_type: "choose_music_app",
+            use_microphone: true,
+            data: {
+                text: "Which app would you like me to open?",
+                apps: [
+                    {
+                        icon_url: "https://ray.storage/youtube-music-icon.png",
+                        name: "Youtube Music",
+                        rpc_on_click: {
+                            name: "open-music-app",
+                            payload: { app: "youtube music" }
+                        }
+                    },
+                    {
+                        icon_url: "https://ray.storage/spotify-icon.png",
+                        name: "Spotify",
+                        rpc_on_click: {
+                            name: "open-music-app",
+                            payload: { app: "spotify" }
+                        }
+                    }
+                ]
+            }
+        };
+
+        addReceivedRpcCommand('show_screen', chooseMusicAppPayload);
+
+        const mockScreenData = {
+            screen_type: "choose_music_app",
+            use_microphone: true,
+            data: {
+                text: "Which app would you like me to open?",
+                apps: [
+                    {
+                        icon_url: "https://ray.storage/youtube-music-icon.png",
+                        name: "Youtube Music",
+                        rpc_on_click: {
+                            name: "open-music-app",
+                            payload: { app: "youtube music" }
+                        }
+                    },
+                    {
+                        icon_url: "https://ray.storage/spotify-icon.png",
+                        name: "Spotify",
+                        rpc_on_click: {
+                            name: "open-music-app",
+                            payload: { app: "spotify" }
                         }
                     }
                 ]
@@ -835,6 +897,52 @@ export const TestPage: React.FC = () => {
                                 Музыкальные команды пока не получены
                             </div>
                         )}
+                    </div>
+
+                    {/* Панель симуляции экранов */}
+                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                        <h3 className="text-sm font-semibold mb-3">📱 Симуляция экранов:</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <button
+                                onClick={simulateRequestPermissions}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                📋 Разрешения
+                            </button>
+                            <button
+                                onClick={simulateAddWaypoint}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                📍 Точки маршрута
+                            </button>
+                            <button
+                                onClick={simulatePaywall}
+                                className="bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                💰 Paywall
+                            </button>
+                            <button
+                                onClick={simulateNavigator}
+                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                🧭 Навигация
+                            </button>
+                            <button
+                                onClick={simulateMainScreen}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                🏠 Главный экран
+                            </button>
+                            <button
+                                onClick={simulateChooseMusicApp}
+                                className="bg-pink-600 hover:bg-pink-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                🎵 Выбор муз. приложения
+                            </button>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-600">
+                            Кнопки для тестирования различных экранов UI
+                        </div>
                     </div>
 
                     {/* Информация о JSON теле запроса */}

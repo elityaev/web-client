@@ -52,7 +52,7 @@ interface NavigatorData {
 export interface OnboardingScreenData {
   screen_type: string;
   use_microphone: boolean;
-  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData | MainScreenData | NavigatorData | MapRouteConfirmData;
+  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData | MainScreenData | NavigatorData | MapRouteConfirmData | ChooseMusicAppData;
   analytics?: any;
 }
 
@@ -99,6 +99,20 @@ export interface PaywallData {
   placement: string;
   rpc_on_purchase?: RpcAction;
   rpc_on_skip?: RpcAction;
+}
+
+interface MusicApp {
+  icon_url: string;
+  name: string;
+  rpc_on_click: {
+    name: string;
+    payload: any;
+  };
+}
+
+export interface ChooseMusicAppData {
+  text: string;
+  apps: MusicApp[];
 }
 
 export interface MainScreenData {
@@ -195,6 +209,20 @@ export class OnboardingService {
         }
 
         console.log('📱 Parsed screen data:', screenData);
+
+        // Специальная обработка для choose_music_app - парсим payload в rpc_on_click
+        if (screenData.screen_type === 'choose_music_app' && screenData.data?.apps) {
+          screenData.data.apps.forEach((app: any) => {
+            if (app.rpc_on_click?.payload && typeof app.rpc_on_click.payload === 'string') {
+              try {
+                app.rpc_on_click.payload = JSON.parse(app.rpc_on_click.payload);
+                console.log('🔧 Parsed app payload:', app.rpc_on_click.payload);
+              } catch (e) {
+                console.warn('⚠️ Could not parse app payload:', app.rpc_on_click.payload);
+              }
+            }
+          });
+        }
 
         // Передаем данные экрана в колбэк
         if (this.onScreenUpdate) {
@@ -798,6 +826,8 @@ export class OnboardingService {
 
     try {
       console.log(`🚀 Sending RPC method: ${method}`, data);
+      console.log(`🚀 Data type:`, typeof data);
+      console.log(`🚀 Data stringified:`, JSON.stringify(data));
       console.log(`📡 Room participants:`, Array.from(this.room.remoteParticipants.keys()));
 
       // Найдем агента среди участников
@@ -811,6 +841,8 @@ export class OnboardingService {
       // Если data уже строка JSON, используем её как есть, иначе сериализуем
       const payload = typeof data === 'string' ? data : JSON.stringify(data);
       console.log(`📤 Final payload being sent:`, payload);
+      console.log(`📤 Final payload type:`, typeof payload);
+      console.log(`📤 Final payload length:`, payload.length);
 
       const result = await this.room.localParticipant.performRpc({
         destinationIdentity: destinationIdentity,
