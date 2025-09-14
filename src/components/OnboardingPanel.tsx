@@ -1,5 +1,5 @@
 import React from 'react';
-import { OnboardingScreenData, RpcAction, RequestPermissionsData, AddWaypointData, PaywallData, MainScreenData, MapRouteConfirmData, ChooseMusicAppData } from '../services/onboardingService';
+import { OnboardingScreenData, RpcAction, RequestPermissionsData, AddWaypointData, PaywallData, MainScreenData, MapRouteConfirmData, ChooseMusicAppData, MusicAppStateData, UniversalScreenData, ChooseContactData, RequestPermissionData } from '../services/onboardingService';
 import { Button } from './ui/Button';
 import { RequestPermissionsScreen } from './RequestPermissionsScreen';
 import { AddWaypointScreen } from './AddWaypointScreen';
@@ -7,7 +7,10 @@ import { PaywallScreen } from './PaywallScreen';
 import { NavigatorScreen } from './NavigatorScreen';
 import { MainScreen } from './MainScreen';
 import { ChooseMusicAppScreen } from './ChooseMusicAppScreen';
+import { MusicAppStateScreen } from './MusicAppStateScreen';
 import { MapRouteConfirmScreen } from './MapRouteConfirmScreen';
+import { UniversalScreen } from './UniversalScreen';
+import { ChooseContactScreen } from './ChooseContactScreen';
 
 interface OnboardingPanelProps {
     screenData: OnboardingScreenData;
@@ -15,6 +18,7 @@ interface OnboardingPanelProps {
 }
 
 export const OnboardingPanel: React.FC<OnboardingPanelProps> = ({ screenData, onRpcMethod }) => {
+
     const handleRpcAction = (action: RpcAction) => {
         console.log('🎯 OnboardingPanel handleRpcAction:', action);
         console.log('🎯 Method name from action.name:', action.name);
@@ -27,6 +31,7 @@ export const OnboardingPanel: React.FC<OnboardingPanelProps> = ({ screenData, on
         console.log('🎯 Calling onRpcMethod with:', action.name, payload);
         onRpcMethod(action.name, payload);
     };
+
 
     // Handle add_waypoint_to_route format
     if (screenData.screen_type === 'add_waypoint_to_route' && screenData.data) {
@@ -65,11 +70,35 @@ export const OnboardingPanel: React.FC<OnboardingPanelProps> = ({ screenData, on
         }
     }
 
+    // Handle music_app_state format
+    if (screenData.screen_type === 'music_app_state' && screenData.data) {
+        const data = screenData.data as MusicAppStateData;
+        if ('text' in data && 'buttons' in data) {
+            return <MusicAppStateScreen data={data} onRpcAction={handleRpcAction} />;
+        }
+    }
+
     // Handle map_route_confirm format
     if (screenData.screen_type === 'map_route_confirm' && screenData.data) {
         const data = screenData.data as MapRouteConfirmData;
         if ('waypoints' in data && 'user_location' in data && 'rpc_on_change_click' in data && 'rpc_on_go_click' in data) {
             return <MapRouteConfirmScreen data={data} onRpcAction={handleRpcAction} />;
+        }
+    }
+
+    // Handle universal format
+    if (screenData.screen_type === 'universal' && screenData.data) {
+        const data = screenData.data as UniversalScreenData;
+        if ('title' in data && 'image_url' in data) {
+            return <UniversalScreen data={data} useMicrophone={screenData.use_microphone} onRpcAction={handleRpcAction} />;
+        }
+    }
+
+    // Handle choose_contact format
+    if (screenData.screen_type === 'choose_contact' && screenData.data) {
+        const data = screenData.data as ChooseContactData;
+        if ('text' in data && 'contacts' in data) {
+            return <ChooseContactScreen data={data} useMicrophone={screenData.use_microphone} onRpcAction={handleRpcAction} />;
         }
     }
 

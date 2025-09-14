@@ -3,6 +3,7 @@ import { useLiveKitStore } from '../stores/liveKitStore';
 import { useOnboardingStore } from '../stores/onboardingStore';
 import { useAuthStore } from '../stores/authStore';
 import { OnboardingPanel } from './OnboardingPanel';
+import { RequestPermissionPopup } from './RequestPermissionPopup';
 import { LoginScreen } from './LoginScreen';
 import { getEnv } from '../utils/env';
 import { Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
@@ -29,6 +30,9 @@ export const TestPage: React.FC = () => {
         currentTrack,
         avatarState,
         lastMusicCommand,
+        simulateLocationTimeout,
+        isLocationTimeoutActive,
+        permissionPopupData,
         setPermission,
         setPlatform,
         setAppleMusicSubscriptionActive,
@@ -37,10 +41,14 @@ export const TestPage: React.FC = () => {
         setCurrentScreen,
         addSentRpcCommand,
         setAvatarState,
-        clearAvatarState
+        clearAvatarState,
+        setSimulateLocationTimeout,
+        setPermissionPopupData
     } = useOnboardingStore();
 
     const { premium, setPremium } = useAuthStore();
+
+    console.log('🔐 TestPage render - permissionPopupData:', permissionPopupData);
 
     const handleLogin = (username: string, password: string) => {
         const envUsername = getEnv('VITE_USERNAME') || 'admin';
@@ -103,6 +111,15 @@ export const TestPage: React.FC = () => {
                 console.warn('⚠️ Agent does not support this RPC method. This is normal for testing.');
             }
         }
+    };
+
+    const handleRpcAction = (action: any) => {
+        console.log('🎯 TestPage handleRpcAction:', action);
+        handleRpcMethod(action.name, action.payload);
+    };
+
+    const handleClosePermissionPopup = () => {
+        setPermissionPopupData(null);
     };
 
     const simulateRequestPermissions = () => {
@@ -487,6 +504,115 @@ export const TestPage: React.FC = () => {
         setCurrentScreen(mockScreenData);
     };
 
+    const simulateMusicAppState = () => {
+        // Симулируем получение RPC show-screen с music_app_state (в формате агента)
+        const { addReceivedRpcCommand } = useOnboardingStore.getState();
+        const musicAppStatePayload = {
+            screen_type: "music_app_state",
+            use_microphone: false,
+            data: {
+                text: "Music started: song - Enter Sandman, album - Metallica, artist - Metallica",
+                buttons: [
+                    {
+                        name: "Apple music",
+                        icon_url: "https://cdn.ray-a.pl/va/apple-music.svg",
+                        rpc_on_click: {
+                            name: "open-music-app",
+                            payload: "{\"app\": \"apple music\"}"
+                        }
+                    }
+                ]
+            }
+        };
+
+        addReceivedRpcCommand('show-screen', musicAppStatePayload);
+        setCurrentScreen(musicAppStatePayload);
+    };
+
+    const simulateUniversalScreen = () => {
+        // Симулируем получение RPC show-screen с universal
+        const { addReceivedRpcCommand } = useOnboardingStore.getState();
+        const universalScreenPayload = {
+            screen_type: "universal",
+            use_microphone: true,
+            avatar_state: {
+                input: "Idle"
+            },
+            data: {
+                title: "Besides guiding you, I'm ...",
+                image_url: "https://static.ray.app/image"
+            }
+        };
+
+        addReceivedRpcCommand('show-screen', universalScreenPayload);
+        setCurrentScreen(universalScreenPayload);
+    };
+
+    const simulateChooseContactScreen = () => {
+        // Симулируем получение RPC show-screen с choose_contact
+        const { addReceivedRpcCommand } = useOnboardingStore.getState();
+        const chooseContactPayload = {
+            screen_type: "choose_contact",
+            use_microphone: true,
+            data: {
+                text: "Call Mr. Smith?",
+                contacts: [
+                    {
+                        title: "Mr. Smith",
+                        subtitle: "+1 234 234 23 23",
+                        label: "1",
+                        rpc_on_call_click: {
+                            name: "call-click",
+                            payload: "1"
+                        }
+                    },
+                    {
+                        title: "Mr. Johnson",
+                        subtitle: "+1 555 666 77 77",
+                        label: "2",
+                        rpc_on_call_click: null
+                    }
+                ]
+            }
+        };
+
+        addReceivedRpcCommand('show-screen', chooseContactPayload);
+        setCurrentScreen(chooseContactPayload);
+    };
+
+    const simulateChooseContactWithNull = () => {
+        // Симулируем получение RPC show-screen с choose_contact где один контакт с null rpc_on_call_click
+        const { addReceivedRpcCommand } = useOnboardingStore.getState();
+        const chooseContactNullPayload = {
+            screen_type: "choose_contact",
+            use_microphone: false,
+            data: {
+                text: "Choose a contact to call:",
+                contacts: [
+                    {
+                        title: "Available Contact",
+                        subtitle: "+1 234 567 89 00",
+                        label: "1",
+                        rpc_on_call_click: {
+                            name: "call-click",
+                            payload: "1"
+                        }
+                    },
+                    {
+                        title: "Unavailable Contact",
+                        subtitle: "Номер недоступен",
+                        label: "2",
+                        rpc_on_call_click: null
+                    }
+                ]
+            }
+        };
+
+        addReceivedRpcCommand('show-screen', chooseContactNullPayload);
+        setCurrentScreen(chooseContactNullPayload);
+    };
+
+
     // Если не авторизован, показываем экран логина
     if (!isAuthenticated) {
         return <LoginScreen onLogin={handleLogin} error={loginError} />;
@@ -701,6 +827,36 @@ export const TestPage: React.FC = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Секция настроек RPC ошибок */}
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                        <h3 className="text-lg font-semibold mb-3">⚠️ Симуляция RPC ошибок</h3>
+                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    id="simulate-location-timeout"
+                                    checked={simulateLocationTimeout}
+                                    onChange={(e) => setSimulateLocationTimeout(e.target.checked)}
+                                    className="w-4 h-4 text-yellow-600 bg-gray-100 border-gray-300 rounded focus:ring-yellow-500"
+                                />
+                                <label htmlFor="simulate-location-timeout" className="ml-2 text-sm font-medium text-gray-900">
+                                    📍 Симулировать таймаут get-location (задержка 15 сек)
+                                </label>
+                            </div>
+                            <div className="mt-2 text-xs text-gray-600">
+                                При включении этой опции все входящие RPC запросы get-location будут задерживаться на 15 секунд, вызывая реальную ошибку таймаута LiveKit
+                            </div>
+                            {isLocationTimeoutActive && (
+                                <div className="mt-3 p-2 bg-red-100 border border-red-300 rounded-lg flex items-center space-x-2">
+                                    <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                                    <span className="text-sm text-red-700 font-medium">
+                                        ⏰ Активна симуляция таймаута get-location (ожидание 15 сек)
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -939,9 +1095,39 @@ export const TestPage: React.FC = () => {
                             >
                                 🎵 Выбор муз. приложения
                             </button>
+                            <button
+                                onClick={simulateMusicAppState}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                🎵 Состояние муз. приложения
+                            </button>
+                            <button
+                                onClick={simulateUniversalScreen}
+                                className="bg-teal-600 hover:bg-teal-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                🌐 Универсальный экран
+                            </button>
+                            <button
+                                onClick={simulateChooseContactScreen}
+                                className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                📞 Выбор контакта
+                            </button>
+                            <button
+                                onClick={simulateChooseContactWithNull}
+                                className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                📞 Контакт с null
+                            </button>
+                            <button
+                                onClick={simulateGetLocation}
+                                className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                📍 Тест get-location
+                            </button>
                         </div>
                         <div className="mt-2 text-xs text-gray-600">
-                            Кнопки для тестирования различных экранов UI
+                            Кнопки для тестирования различных экранов UI и RPC методов
                         </div>
                     </div>
 
@@ -1044,7 +1230,8 @@ export const TestPage: React.FC = () => {
                                                                     command.method === 'pause-track' ? '⏸️ pause-track' :
                                                                         command.method === 'resume-track' ? '▶️ resume-track' :
                                                                             command.method === 'play-music' ? '🎵 play-music' :
-                                                                                command.method === 'open-music-app' ? '📱 open-music-app' : command.method}
+                                                                                command.method === 'open-music-app' ? '📱 open-music-app' :
+                                                                                    command.method === 'music_app_state' ? '🎵 music_app_state' : command.method}
                                         </h3>
                                         <span className="text-sm text-gray-500">
                                             {command.timestamp.toLocaleTimeString()}
@@ -1151,6 +1338,24 @@ export const TestPage: React.FC = () => {
                                             </div>
                                         </div>
                                     )}
+
+                                    {command.method === 'music_app_state' && (
+                                        <div className="mt-3">
+                                            <div className="bg-purple-50 border border-purple-200 rounded p-3">
+                                                <div className="text-sm text-purple-800 font-medium mb-1">
+                                                    🎵 Состояние музыкального приложения:
+                                                </div>
+                                                <div className="text-xs text-purple-700 mb-2">
+                                                    {command.data?.text || 'Нет текста'}
+                                                </div>
+                                                {command.data?.button && (
+                                                    <div className="text-xs text-purple-600">
+                                                        Кнопка: {command.data.button.text} → {command.data.button.rpc_on_click?.name}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -1178,6 +1383,15 @@ export const TestPage: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Попап для запроса разрешений - показывается поверх любого контента */}
+            {permissionPopupData && (
+                <RequestPermissionPopup
+                    data={permissionPopupData}
+                    onRpcAction={handleRpcAction}
+                    onClose={handleClosePermissionPopup}
+                />
+            )}
         </div>
     );
 };

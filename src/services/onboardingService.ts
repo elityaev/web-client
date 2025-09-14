@@ -52,7 +52,10 @@ interface NavigatorData {
 export interface OnboardingScreenData {
   screen_type: string;
   use_microphone: boolean;
-  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData | MainScreenData | NavigatorData | MapRouteConfirmData | ChooseMusicAppData;
+  avatar_state?: {
+    input: string;
+  };
+  data?: PermissionRequestData | RequestPermissionsData | AddWaypointData | PaywallData | MainScreenData | NavigatorData | MapRouteConfirmData | ChooseMusicAppData | MusicAppStateData | UniversalScreenData | ChooseContactData | RequestPermissionData;
   analytics?: any;
 }
 
@@ -115,6 +118,18 @@ export interface ChooseMusicAppData {
   apps: MusicApp[];
 }
 
+export interface MusicAppStateData {
+  text: string;
+  buttons: Array<{
+    name: string;
+    icon_url?: string;
+    rpc_on_click: {
+      name: string;
+      payload: any;
+    };
+  }>;
+}
+
 export interface MainScreenData {
   text: string;
   buttons: Array<{
@@ -150,13 +165,47 @@ export interface MapRouteConfirmData {
   };
 }
 
+export interface UniversalScreenData {
+  title: string;
+  subtitle?: string;
+  image_url: string;
+  buttons?: Array<{
+    text: string;
+    primary: boolean;
+    rpc_on_click: RpcAction;
+  }>;
+}
+
+export interface Contact {
+  title: string;
+  subtitle: string;
+  label: string;
+  rpc_on_call_click: {
+    name: string;
+    payload: string;
+  } | null;
+}
+
+export interface ChooseContactData {
+  text: string;
+  contacts: Contact[];
+}
+
 // Export new types
-export type { RpcAction, Permission, Button, RequestPermissionsData, WaypointResult, AddWaypointData, LocationInfo, Location, NavigatorData };
+// Интерфейс для request-permission payload
+interface RequestPermissionData {
+  type: string;
+  rpc_on_allow?: RpcAction;
+  rpc_on_deny?: RpcAction;
+}
+
+export type { RpcAction, Permission, Button, RequestPermissionsData, WaypointResult, AddWaypointData, LocationInfo, Location, NavigatorData, RequestPermissionData };
 
 export class OnboardingService {
   private room: Room | null = null;
   private onScreenUpdate?: (screenData: OnboardingScreenData) => void;
   private onRpcCommand?: (command: RpcCommand) => void;
+  private onRequestPermissionPopup?: (data: RequestPermissionData) => void;
   private permissions: { microphone: boolean; location: boolean; push: boolean; apple_music: boolean } = {
     microphone: false,
     location: false,
@@ -164,10 +213,33 @@ export class OnboardingService {
     apple_music: false
   };
 
+  private simulateLocationTimeout = false;
+
   setRoom(room: Room) {
     console.log('🔄 Setting room in OnboardingService:', room);
     this.room = room;
     this.setupEventHandlers();
+  }
+
+  private async createFilteredCurrentItem() {
+    // Получаем текущий трек из store
+    const { useOnboardingStore } = await import('../stores/onboardingStore');
+    const currentTrack = useOnboardingStore.getState().currentTrack;
+
+    // Формируем ответ - включаем только поля с значениями
+    const current_item: { [key: string]: string } = {};
+
+    if (currentTrack.song && currentTrack.song.trim() !== '') {
+      current_item.song = currentTrack.song;
+    }
+    if (currentTrack.album && currentTrack.album.trim() !== '') {
+      current_item.album = currentTrack.album;
+    }
+    if (currentTrack.artist && currentTrack.artist.trim() !== '') {
+      current_item.artist = currentTrack.artist;
+    }
+
+    return current_item;
   }
 
   setOnScreenUpdate(callback: (screenData: OnboardingScreenData) => void) {
@@ -180,11 +252,33 @@ export class OnboardingService {
     this.onRpcCommand = callback;
   }
 
+  setOnRequestPermissionPopup(callback: (data: RequestPermissionData) => void) {
+    console.log('🎯 Setting onRequestPermissionPopup callback');
+    this.onRequestPermissionPopup = callback;
+  }
+
   setPermissions(permissions: { microphone: boolean; location: boolean; push: boolean; apple_music: boolean }) {
     console.log('🔧 Setting permissions:', permissions);
     console.log('🔧 Previous permissions:', this.permissions);
     this.permissions = permissions;
     console.log('🔧 New permissions set:', this.permissions);
+  }
+
+  setSimulateLocationTimeout(value: boolean) {
+    console.log('🔧 Setting simulate location timeout:', value);
+    this.simulateLocationTimeout = value;
+  }
+
+  private onLocationTimeoutActiveChange?: (value: boolean) => void;
+
+  setLocationTimeoutActiveCallback(callback: (value: boolean) => void) {
+    this.onLocationTimeoutActiveChange = callback;
+  }
+
+  private setLocationTimeoutActive(value: boolean) {
+    if (this.onLocationTimeoutActiveChange) {
+      this.onLocationTimeoutActiveChange(value);
+    }
   }
 
   private setupEventHandlers() {
@@ -196,7 +290,7 @@ export class OnboardingService {
     console.log('🔧 Setting up event handlers for room:', this.room);
 
     // Регистрируем RPC метод show-screen для получения экранов от агента
-    this.room.localParticipant.registerRpcMethod('show-screen', async (data) => {
+    const showScreenHandler = async (data: any) => {
       try {
         console.log('🎯 Received show-screen RPC from agent:', data);
 
@@ -224,6 +318,35 @@ export class OnboardingService {
           });
         }
 
+        // Специальная обработка для music_app_state - парсим payload в rpc_on_click
+        if (screenData.screen_type === 'music_app_state' && screenData.data?.buttons) {
+          screenData.data.buttons.forEach((button: any) => {
+            if (button.rpc_on_click?.payload && typeof button.rpc_on_click.payload === 'string') {
+              try {
+                button.rpc_on_click.payload = JSON.parse(button.rpc_on_click.payload);
+                console.log('🔧 Parsed music_app_state button payload:', button.rpc_on_click.payload);
+              } catch (e) {
+                console.warn('⚠️ Could not parse music_app_state button payload:', button.rpc_on_click.payload);
+              }
+            }
+          });
+        }
+
+        // Специальная обработка для choose_contact - парсим payload в rpc_on_call_click
+        if (screenData.screen_type === 'choose_contact' && screenData.data?.contacts) {
+          screenData.data.contacts.forEach((contact: any) => {
+            if (contact.rpc_on_call_click?.payload && typeof contact.rpc_on_call_click.payload === 'string') {
+              try {
+                contact.rpc_on_call_click.payload = JSON.parse(contact.rpc_on_call_click.payload);
+                console.log('🔧 Parsed contact payload:', contact.rpc_on_call_click.payload);
+              } catch (e) {
+                console.warn('⚠️ Could not parse contact payload:', contact.rpc_on_call_click.payload);
+                // Если парсинг не удался, оставляем payload как есть
+              }
+            }
+          });
+        }
+
         // Передаем данные экрана в колбэк
         if (this.onScreenUpdate) {
           console.log('✅ Calling onScreenUpdate callback with data:', screenData);
@@ -238,7 +361,10 @@ export class OnboardingService {
         console.error('❌ Error handling show-screen RPC:', error);
         return JSON.stringify({ success: false, error: (error as Error).message });
       }
-    });
+    };
+
+    // Регистрируем RPC метод show-screen
+    this.room.localParticipant.registerRpcMethod('show-screen', showScreenHandler);
 
     // RPC метод get-premium
     this.room.localParticipant.registerRpcMethod('get-premium', async (data) => {
@@ -405,18 +531,10 @@ export class OnboardingService {
           });
         }
 
-        // Получаем текущий трек из store
-        const { useOnboardingStore } = await import('../stores/onboardingStore');
-        const currentTrack = useOnboardingStore.getState().currentTrack;
-        console.log('🔍 Current track from store:', currentTrack);
-
-        // Формируем ответ
+        // Получаем отфильтрованную информацию о текущем треке
+        const current_item = await this.createFilteredCurrentItem();
         const response = {
-          current_item: {
-            song: currentTrack.song,
-            album: currentTrack.album,
-            artist: currentTrack.artist
-          }
+          current_item
         };
 
         console.log('📤 Sending play-music response:', response);
@@ -425,11 +543,7 @@ export class OnboardingService {
         console.error('❌ Error handling play-music-with-search RPC:', error);
         return JSON.stringify({
           error: (error as Error).message,
-          current_item: {
-            song: null,
-            album: null,
-            artist: null
-          }
+          current_item: {}
         });
       }
     });
@@ -445,6 +559,32 @@ export class OnboardingService {
             method: 'get-location',
             command_data: data
           });
+        }
+
+        // Проверяем, нужно ли симулировать ошибку RESPONSE_TIMEOUT
+        if (this.simulateLocationTimeout) {
+          console.log('⏰ Simulating RESPONSE_TIMEOUT by delaying response for 15 seconds');
+          console.log('⏰ LiveKit should timeout this RPC call before we respond');
+
+          // Устанавливаем флаг активности таймаута
+          this.setLocationTimeoutActive(true);
+
+          // Задерживаем ответ на 15 секунд, чтобы LiveKit выдал реальную ошибку таймаута
+          const timeoutPromise = new Promise(resolve => setTimeout(resolve, 15000));
+
+          // Показываем прогресс каждые 3 секунды
+          const progressInterval = setInterval(() => {
+            console.log('⏰ Still waiting for LiveKit timeout...');
+          }, 3000);
+
+          try {
+            await timeoutPromise;
+            clearInterval(progressInterval);
+            console.log('⏰ 15 seconds elapsed - this should not be reached due to LiveKit timeout');
+          } finally {
+            // Снимаем флаг активности таймаута
+            this.setLocationTimeoutActive(false);
+          }
         }
 
         // Возвращаем фиксированные координаты
@@ -554,11 +694,22 @@ export class OnboardingService {
         const { useOnboardingStore } = await import('../stores/onboardingStore');
         useOnboardingStore.getState().setLastMusicCommand('next-track');
 
+        // Получаем отфильтрованную информацию о текущем треке
+        const current_item = await this.createFilteredCurrentItem();
+
         console.log('⏭️ Next track command processed');
-        return JSON.stringify({ success: true, message: 'Next track command received' });
+        return JSON.stringify({
+          success: true,
+          message: 'Next track command received',
+          current_item
+        });
       } catch (error) {
         console.error('❌ Error handling next-track RPC:', error);
-        return JSON.stringify({ success: false, error: (error as Error).message });
+        return JSON.stringify({
+          success: false,
+          error: (error as Error).message,
+          current_item: {}
+        });
       }
     });
 
@@ -578,11 +729,22 @@ export class OnboardingService {
         const { useOnboardingStore } = await import('../stores/onboardingStore');
         useOnboardingStore.getState().setLastMusicCommand('previous-track');
 
+        // Получаем отфильтрованную информацию о текущем треке
+        const current_item = await this.createFilteredCurrentItem();
+
         console.log('⏮️ Previous track command processed');
-        return JSON.stringify({ success: true, message: 'Previous track command received' });
+        return JSON.stringify({
+          success: true,
+          message: 'Previous track command received',
+          current_item
+        });
       } catch (error) {
         console.error('❌ Error handling previous-track RPC:', error);
-        return JSON.stringify({ success: false, error: (error as Error).message });
+        return JSON.stringify({
+          success: false,
+          error: (error as Error).message,
+          current_item: {}
+        });
       }
     });
 
@@ -602,11 +764,22 @@ export class OnboardingService {
         const { useOnboardingStore } = await import('../stores/onboardingStore');
         useOnboardingStore.getState().setLastMusicCommand('pause-track');
 
+        // Получаем отфильтрованную информацию о текущем треке
+        const current_item = await this.createFilteredCurrentItem();
+
         console.log('⏸️ Pause track command processed');
-        return JSON.stringify({ success: true, message: 'Pause track command received' });
+        return JSON.stringify({
+          success: true,
+          message: 'Pause track command received',
+          current_item
+        });
       } catch (error) {
         console.error('❌ Error handling pause-track RPC:', error);
-        return JSON.stringify({ success: false, error: (error as Error).message });
+        return JSON.stringify({
+          success: false,
+          error: (error as Error).message,
+          current_item: {}
+        });
       }
     });
 
@@ -626,11 +799,22 @@ export class OnboardingService {
         const { useOnboardingStore } = await import('../stores/onboardingStore');
         useOnboardingStore.getState().setLastMusicCommand('resume-track');
 
+        // Получаем отфильтрованную информацию о текущем треке
+        const current_item = await this.createFilteredCurrentItem();
+
         console.log('▶️ Resume track command processed');
-        return JSON.stringify({ success: true, message: 'Resume track command received' });
+        return JSON.stringify({
+          success: true,
+          message: 'Resume track command received',
+          current_item
+        });
       } catch (error) {
         console.error('❌ Error handling resume-track RPC:', error);
-        return JSON.stringify({ success: false, error: (error as Error).message });
+        return JSON.stringify({
+          success: false,
+          error: (error as Error).message,
+          current_item: {}
+        });
       }
     });
 
@@ -650,11 +834,22 @@ export class OnboardingService {
         const { useOnboardingStore } = await import('../stores/onboardingStore');
         useOnboardingStore.getState().setLastMusicCommand('play-music');
 
+        // Получаем отфильтрованную информацию о текущем треке
+        const current_item = await this.createFilteredCurrentItem();
+
         console.log('🎵 Play music command processed');
-        return JSON.stringify({ success: true, message: 'Play music command received' });
+        return JSON.stringify({
+          success: true,
+          message: 'Play music command received',
+          current_item
+        });
       } catch (error) {
         console.error('❌ Error handling play-music RPC:', error);
-        return JSON.stringify({ success: false, error: (error as Error).message });
+        return JSON.stringify({
+          success: false,
+          error: (error as Error).message,
+          current_item: {}
+        });
       }
     });
 
@@ -689,6 +884,45 @@ export class OnboardingService {
         return JSON.stringify({ success: true, message: `Open ${appName} command received` });
       } catch (error) {
         console.error('❌ Error handling open-music-app RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    // Регистрируем RPC метод request-permission
+    this.room.localParticipant.registerRpcMethod('request-permission', async (data) => {
+      try {
+        console.log('🎯 Received request-permission RPC from agent:', data);
+
+        // Парсим payload
+        let payload;
+        if (typeof data.payload === 'string') {
+          payload = JSON.parse(data.payload);
+        } else {
+          payload = data.payload;
+        }
+
+        console.log('🔍 Parsed request-permission payload:', payload);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'request-permission',
+            command_data: payload
+          });
+        }
+
+        // Показываем попап с запросом разрешения через специальный колбэк
+        if (this.onRequestPermissionPopup) {
+          console.log('🔐 Calling onRequestPermissionPopup with payload:', payload);
+          this.onRequestPermissionPopup(payload);
+        } else {
+          console.warn('⚠️ onRequestPermissionPopup callback is not set');
+        }
+
+        console.log('🔐 Permission request popup shown');
+        return JSON.stringify({ success: true });
+      } catch (error) {
+        console.error('❌ Error handling request-permission RPC:', error);
         return JSON.stringify({ success: false, error: (error as Error).message });
       }
     });

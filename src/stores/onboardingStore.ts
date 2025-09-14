@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Room } from 'livekit-client';
-import { OnboardingService, OnboardingScreenData } from '../services/onboardingService';
+import { OnboardingService, OnboardingScreenData, RequestPermissionData } from '../services/onboardingService';
 
 interface OnboardingStore {
   isOnboardingActive: boolean;
@@ -45,6 +45,13 @@ interface OnboardingStore {
     timestamp: Date | null;
   };
 
+  // RPC error simulation
+  simulateLocationTimeout: boolean;
+  isLocationTimeoutActive: boolean;
+
+  // Permission popup state
+  permissionPopupData: RequestPermissionData | null;
+
   // Actions
   initializeWithRoom: (room: Room) => void;
   handleRpcMethod: (method: string, data?: any) => Promise<void>;
@@ -60,6 +67,9 @@ interface OnboardingStore {
   setAvatarState: (state: string) => void;
   clearAvatarState: () => void;
   setLastMusicCommand: (command: string, app?: string) => void;
+  setSimulateLocationTimeout: (value: boolean) => void;
+  setLocationTimeoutActive: (value: boolean) => void;
+  setPermissionPopupData: (data: RequestPermissionData | null) => void;
 }
 
 export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
@@ -99,15 +109,28 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     timestamp: null,
   },
 
+  simulateLocationTimeout: false,
+  isLocationTimeoutActive: false,
+
+  permissionPopupData: null,
+
   initializeWithRoom: (room: Room) => {
-    const { onboardingService, permissions } = get();
+    const { onboardingService, permissions, simulateLocationTimeout } = get();
     onboardingService.setRoom(room);
     onboardingService.setPermissions(permissions); // Устанавливаем текущие permissions
+    onboardingService.setSimulateLocationTimeout(simulateLocationTimeout); // Устанавливаем настройку симуляции timeout
+    onboardingService.setLocationTimeoutActiveCallback((value) => {
+      set({ isLocationTimeoutActive: value });
+    });
     onboardingService.setOnScreenUpdate((screen) => {
       set({ currentScreen: screen });
     });
     onboardingService.setOnRpcCommand((command) => {
       get().addReceivedRpcCommand(command.method, command.command_data);
+    });
+    onboardingService.setOnRequestPermissionPopup((data) => {
+      console.log('🔐 Store received permission popup data:', data);
+      set({ permissionPopupData: data });
     });
   },
 
@@ -236,5 +259,22 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         timestamp: new Date(),
       },
     });
+  },
+
+  setSimulateLocationTimeout: (value: boolean) => {
+    console.log('📍 Setting simulate location timeout:', value);
+    const { onboardingService } = get();
+    onboardingService.setSimulateLocationTimeout(value);
+    set({ simulateLocationTimeout: value });
+  },
+
+  setLocationTimeoutActive: (value: boolean) => {
+    console.log('📍 Setting location timeout active:', value);
+    set({ isLocationTimeoutActive: value });
+  },
+
+  setPermissionPopupData: (data: RequestPermissionData | null) => {
+    console.log('🔐 Setting permission popup data:', data);
+    set({ permissionPopupData: data });
   },
 }));
