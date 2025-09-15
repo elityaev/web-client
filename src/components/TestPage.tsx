@@ -178,6 +178,14 @@ export const TestPage: React.FC = () => {
         addReceivedRpcCommand('get-location', { timestamp: new Date().toISOString() });
     };
 
+    const simulateMakePhoneCall = () => {
+        console.log('📞 simulateMakePhoneCall called');
+        // Симулируем получение RPC make-phone-call
+        const { addReceivedRpcCommand } = useOnboardingStore.getState();
+        addReceivedRpcCommand('make-phone-call', { phone_number: '+1 212-736-3100' });
+        console.log('📞 simulateMakePhoneCall - addReceivedRpcCommand called');
+    };
+
     const simulateAddWaypoint = () => {
         const mockScreenData = {
             screen_type: "add_waypoint_to_route",
@@ -219,6 +227,10 @@ export const TestPage: React.FC = () => {
                         rpc_on_go_click: {
                             name: "rpc-on-go-click",
                             payload: JSON.stringify({ id: "osdijvokanseo2ij3d09j" })
+                        },
+                        rpc_on_call_click: {
+                            name: "rpc-on-call-click",
+                            payload: JSON.stringify({ id: "osdijvokanseo2ij3d09j" })
                         }
                     },
                     {
@@ -259,6 +271,10 @@ export const TestPage: React.FC = () => {
                         },
                         rpc_on_go_click: {
                             name: "rpc-on-go-click",
+                            payload: JSON.stringify({ id: "osdijvokanseo2ij3d09j2" })
+                        },
+                        rpc_on_call_click: {
+                            name: "rpc-on-call-click",
                             payload: JSON.stringify({ id: "osdijvokanseo2ij3d09j2" })
                         }
                     }
@@ -302,6 +318,10 @@ export const TestPage: React.FC = () => {
                         },
                         rpc_on_go_click: {
                             name: "rpc-on-go-click",
+                            payload: JSON.stringify({ id: "osdijvokanseo2ij3d09j3" })
+                        },
+                        rpc_on_call_click: {
+                            name: "rpc-on-call-click",
                             payload: JSON.stringify({ id: "osdijvokanseo2ij3d09j3" })
                         }
                     }
@@ -1124,6 +1144,12 @@ export const TestPage: React.FC = () => {
                                 className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded text-xs"
                             >
                                 📍 Тест get-location
+                            </button>
+                            <button
+                                onClick={simulateMakePhoneCall}
+                                className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                📞 Тест make-phone-call
                             </button>
                         </div>
                         <div className="mt-2 text-xs text-gray-600">

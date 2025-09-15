@@ -18,7 +18,8 @@ const WaypointCard: React.FC<WaypointCardProps> = ({ waypoint, onRpcAction, type
         console.log('🔍 DEBUG waypoint RPC actions:', {
             rpc_on_card_click: waypoint.rpc_on_card_click,
             rpc_on_pin_click: waypoint.rpc_on_pin_click,
-            rpc_on_go_click: waypoint.rpc_on_go_click
+            rpc_on_go_click: waypoint.rpc_on_go_click,
+            rpc_on_call_click: waypoint.rpc_on_call_click
         });
     }, [waypoint]);
 
@@ -158,6 +159,15 @@ const WaypointCard: React.FC<WaypointCardProps> = ({ waypoint, onRpcAction, type
                         className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded text-sm font-medium"
                     >
                         🚗 Go
+                    </button>
+                )}
+
+                {waypoint.rpc_on_call_click && waypoint.extended && (
+                    <button
+                        onClick={() => handleRpcAction(waypoint.rpc_on_call_click!)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm font-medium"
+                    >
+                        📞 Call
                     </button>
                 )}
             </div>

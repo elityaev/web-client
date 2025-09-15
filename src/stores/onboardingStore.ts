@@ -52,6 +52,12 @@ interface OnboardingStore {
   // Permission popup state
   permissionPopupData: RequestPermissionData | null;
 
+  // Phone call state
+  phoneCallData: {
+    phoneNumber: string | null;
+    isActive: boolean;
+  } | null;
+
   // Actions
   initializeWithRoom: (room: Room) => void;
   handleRpcMethod: (method: string, data?: any) => Promise<void>;
@@ -70,6 +76,7 @@ interface OnboardingStore {
   setSimulateLocationTimeout: (value: boolean) => void;
   setLocationTimeoutActive: (value: boolean) => void;
   setPermissionPopupData: (data: RequestPermissionData | null) => void;
+  setPhoneCallData: (data: { phoneNumber: string; isActive: boolean } | null) => void;
 }
 
 export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
@@ -114,6 +121,8 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
 
   permissionPopupData: null,
 
+  phoneCallData: null,
+
   initializeWithRoom: (room: Room) => {
     const { onboardingService, permissions, simulateLocationTimeout } = get();
     onboardingService.setRoom(room);
@@ -152,6 +161,8 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   },
 
   addReceivedRpcCommand: (method: string, data: any) => {
+    console.log('📞 addReceivedRpcCommand called with:', { method, data });
+
     set((state) => {
       const newCommand = {
         method,
@@ -168,6 +179,11 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     // Обработка специальных RPC команд
     if (method === 'set-avatar-state' && data?.input) {
       get().setAvatarState(data.input);
+    }
+
+    if (method === 'make-phone-call' && data?.phone_number) {
+      console.log('📞 Setting phone call data:', { phoneNumber: data.phone_number, isActive: true });
+      get().setPhoneCallData({ phoneNumber: data.phone_number, isActive: true });
     }
   },
 
@@ -276,5 +292,11 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   setPermissionPopupData: (data: RequestPermissionData | null) => {
     console.log('🔐 Setting permission popup data:', data);
     set({ permissionPopupData: data });
+  },
+
+  setPhoneCallData: (data: { phoneNumber: string; isActive: boolean } | null) => {
+    console.log('📞 setPhoneCallData called with:', data);
+    set({ phoneCallData: data });
+    console.log('📞 phoneCallData state updated to:', data);
   },
 }));

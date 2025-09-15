@@ -89,6 +89,7 @@ interface WaypointResult {
   rpc_on_card_click?: RpcAction;
   rpc_on_pin_click?: RpcAction;
   rpc_on_go_click?: RpcAction;
+  rpc_on_call_click?: RpcAction;
 }
 
 interface AddWaypointData {
@@ -923,6 +924,39 @@ export class OnboardingService {
         return JSON.stringify({ success: true });
       } catch (error) {
         console.error('❌ Error handling request-permission RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
+    // Регистрируем RPC метод make-phone-call
+    this.room.localParticipant.registerRpcMethod('make-phone-call', async (data) => {
+      try {
+        console.log('🎯 Received make-phone-call RPC from agent:', data);
+
+        // Парсим payload
+        let payload;
+        if (typeof data.payload === 'string') {
+          payload = JSON.parse(data.payload);
+        } else {
+          payload = data.payload;
+        }
+
+        console.log('📞 Phone call payload:', payload);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'make-phone-call',
+            command_data: payload
+          });
+        } else {
+          console.warn('⚠️ onRpcCommand callback is not set');
+        }
+
+        console.log('📞 Phone call request processed');
+        return JSON.stringify({ success: true });
+      } catch (error) {
+        console.error('❌ Error handling make-phone-call RPC:', error);
         return JSON.stringify({ success: false, error: (error as Error).message });
       }
     });
