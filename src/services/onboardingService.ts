@@ -961,6 +961,39 @@ export class OnboardingService {
       }
     });
 
+    // Регистрируем RPC метод send-analytics
+    this.room.localParticipant.registerRpcMethod('send-analytics', async (data) => {
+      try {
+        console.log('📊 Received send-analytics RPC from agent:', data);
+
+        // Парсим payload
+        let payload;
+        if (typeof data.payload === 'string') {
+          payload = JSON.parse(data.payload);
+        } else {
+          payload = data.payload;
+        }
+
+        console.log('📊 Analytics payload:', payload);
+
+        // Показываем уведомление о получении запроса
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'send-analytics',
+            command_data: payload
+          });
+        } else {
+          console.warn('⚠️ onRpcCommand callback is not set');
+        }
+
+        console.log('📊 Analytics request processed');
+        return JSON.stringify({ success: true });
+      } catch (error) {
+        console.error('❌ Error handling send-analytics RPC:', error);
+        return JSON.stringify({ success: false, error: (error as Error).message });
+      }
+    });
+
     console.log('🔧 RPC methods registered successfully');
 
     // Обработка входящих данных от агента (для совместимости)

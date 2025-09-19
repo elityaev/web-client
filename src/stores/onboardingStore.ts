@@ -58,6 +58,15 @@ interface OnboardingStore {
     isActive: boolean;
   } | null;
 
+  // Analytics state
+  analyticsEvents: Array<{
+    payload: any;
+    timestamp: Date;
+    id: string;
+  }>;
+  isAnalyticsWindowOpen: boolean;
+  showAnalyticsNotification: boolean;
+
   // Actions
   initializeWithRoom: (room: Room) => void;
   handleRpcMethod: (method: string, data?: any) => Promise<void>;
@@ -77,6 +86,10 @@ interface OnboardingStore {
   setLocationTimeoutActive: (value: boolean) => void;
   setPermissionPopupData: (data: RequestPermissionData | null) => void;
   setPhoneCallData: (data: { phoneNumber: string; isActive: boolean } | null) => void;
+  addAnalyticsEvent: (payload: any) => void;
+  clearAnalyticsEvents: () => void;
+  setAnalyticsWindowOpen: (isOpen: boolean) => void;
+  setShowAnalyticsNotification: (show: boolean) => void;
 }
 
 export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
@@ -122,6 +135,10 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
   permissionPopupData: null,
 
   phoneCallData: null,
+
+  analyticsEvents: [],
+  isAnalyticsWindowOpen: false,
+  showAnalyticsNotification: false,
 
   initializeWithRoom: (room: Room) => {
     const { onboardingService, permissions, simulateLocationTimeout } = get();
@@ -184,6 +201,13 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     if (method === 'make-phone-call' && data?.phone_number) {
       console.log('📞 Setting phone call data:', { phoneNumber: data.phone_number, isActive: true });
       get().setPhoneCallData({ phoneNumber: data.phone_number, isActive: true });
+    }
+
+    if (method === 'send-analytics') {
+      console.log('📊 Adding analytics event:', data);
+      get().addAnalyticsEvent(data);
+      // Показываем уведомление о новом analytics событии
+      get().setShowAnalyticsNotification(true);
     }
   },
 
@@ -248,7 +272,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
 
   setAvatarState: (state: string) => {
     console.log('👤 Setting avatar state:', state);
-    set((prev) => ({
+    set(() => ({
       avatarState: {
         isListening: state === 'Listen',
         currentState: state,
@@ -258,7 +282,7 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
 
   clearAvatarState: () => {
     console.log('👤 Clearing avatar state');
-    set((prev) => ({
+    set(() => ({
       avatarState: {
         isListening: false,
         currentState: null,
@@ -298,5 +322,33 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     console.log('📞 setPhoneCallData called with:', data);
     set({ phoneCallData: data });
     console.log('📞 phoneCallData state updated to:', data);
+  },
+
+  addAnalyticsEvent: (payload: any) => {
+    console.log('📊 addAnalyticsEvent called with:', payload);
+    const newEvent = {
+      payload,
+      timestamp: new Date(),
+      id: Math.random().toString(36).substr(2, 9)
+    };
+    set((state) => ({
+      analyticsEvents: [...state.analyticsEvents, newEvent]
+    }));
+    console.log('📊 analytics event added:', newEvent);
+  },
+
+  clearAnalyticsEvents: () => {
+    console.log('📊 clearAnalyticsEvents called');
+    set({ analyticsEvents: [] });
+  },
+
+  setAnalyticsWindowOpen: (isOpen: boolean) => {
+    console.log('📊 setAnalyticsWindowOpen called with:', isOpen);
+    set({ isAnalyticsWindowOpen: isOpen });
+  },
+
+  setShowAnalyticsNotification: (show: boolean) => {
+    console.log('📊 setShowAnalyticsNotification called with:', show);
+    set({ showAnalyticsNotification: show });
   },
 }));

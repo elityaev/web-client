@@ -186,6 +186,27 @@ export const TestPage: React.FC = () => {
         console.log('📞 simulateMakePhoneCall - addReceivedRpcCommand called');
     };
 
+    const simulateSendAnalytics = () => {
+        console.log('📊 simulateSendAnalytics called');
+        // Симулируем получение RPC send-analytics
+        const { addReceivedRpcCommand } = useOnboardingStore.getState();
+        const mockAnalyticsData = {
+            event: 'user_action',
+            action: 'button_click',
+            screen: 'add_waypoint_to_route',
+            timestamp: new Date().toISOString(),
+            user_id: 'user_123',
+            session_id: 'session_456',
+            metadata: {
+                waypoint_id: '5GjOCyXMUOsLhBw6vwpo_Q',
+                location: 'Empire State Building',
+                distance: '2920.8 mi'
+            }
+        };
+        addReceivedRpcCommand('send-analytics', mockAnalyticsData);
+        console.log('📊 simulateSendAnalytics - addReceivedRpcCommand called');
+    };
+
     const simulateAddWaypoint = () => {
         const mockScreenData = {
             screen_type: "add_waypoint_to_route",
@@ -1150,6 +1171,12 @@ export const TestPage: React.FC = () => {
                                 className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded text-xs"
                             >
                                 📞 Тест make-phone-call
+                            </button>
+                            <button
+                                onClick={simulateSendAnalytics}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-2 rounded text-xs"
+                            >
+                                📊 Тест send-analytics
                             </button>
                         </div>
                         <div className="mt-2 text-xs text-gray-600">
