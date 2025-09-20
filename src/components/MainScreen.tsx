@@ -25,7 +25,7 @@ export const MainScreen: React.FC<MainScreenProps> = ({ data, onRpcAction }) => 
         console.log('🎯 MainScreen button clicked:', button);
         onRpcAction({
             name: button.rpc_on_click.name,
-            payload: button.rpc_on_click.payload ? JSON.stringify(button.rpc_on_click.payload) : undefined
+            payload: button.rpc_on_click.payload
         });
     };
 
