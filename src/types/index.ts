@@ -3,6 +3,7 @@ export interface TokenRequest {
   language: string;
   platform: string;
   app_version: string;
+  install_id?: string;
 }
 
 export interface TokenResponse {

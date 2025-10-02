@@ -2,6 +2,7 @@ import React from 'react';
 import { OnboardingPanel } from './OnboardingPanel';
 import { AvatarStateIndicator } from './AvatarStateIndicator';
 import { PremiumControls } from './PremiumControls';
+import { InstallIdControls } from './InstallIdControls';
 import { RequestPermissionPopup } from './RequestPermissionPopup';
 import { PhoneCallSimulation } from './PhoneCallSimulation';
 import { AnalyticsWindow } from './AnalyticsWindow';
@@ -69,6 +70,7 @@ export const MainDashboard: React.FC = () => {
     <div className="container mx-auto p-4">
       <AvatarStateIndicator />
       <PremiumControls />
+      <InstallIdControls />
 
       {/* Временная кнопка для тестирования звонка */}
       <div className="mb-4 flex gap-2">

@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 import { OnboardingPanel } from './OnboardingPanel';
 import { RequestPermissionPopup } from './RequestPermissionPopup';
 import { LoginScreen } from './LoginScreen';
+import { InstallIdControls } from './InstallIdControls';
 import { getEnv } from '../utils/env';
 import { Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
@@ -931,6 +932,11 @@ export const TestPage: React.FC = () => {
                                 ❌ Выключить всё
                             </button>
                         </div>
+                    </div>
+
+                    {/* Install ID Controls */}
+                    <div className="mt-6">
+                        <InstallIdControls />
                     </div>
                 </div>
 

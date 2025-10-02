@@ -4,6 +4,7 @@ import { LiveKitService } from '../services/liveKitService';
 import { ApiService } from '../services/apiService';
 import { ConnectionState } from '../types';
 import { useOnboardingStore } from './onboardingStore';
+import { useInstallIdStore } from './installIdStore';
 
 interface LiveKitState {
   liveKitService: LiveKitService;
@@ -154,16 +155,26 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
         console.log('🔄 Starting connection process with onboarding:', withOnboarding);
         set({ isConnecting: true });
 
-        // Получаем platform из onboardingStore
+        // Получаем platform из onboardingStore и install_id из installIdStore
         const onboardingStore = useOnboardingStore.getState();
-        const tokenRequest = {
+        const installIdStore = useInstallIdStore.getState();
+
+        const tokenRequest: any = {
           r: "WRvDNvFSNrVOn0wGskCma9ydJ0CYGGt8",
           language: "en-US",
           app_version: "0.0.30",
           platform: onboardingStore.platform
         };
 
+        // Добавляем install_id если он включен и не пустой
+        if (installIdStore.enabled && installIdStore.value.trim()) {
+          tokenRequest.install_id = installIdStore.value.trim();
+        }
+
         console.log('🔧 Using platform for token request:', onboardingStore.platform);
+        if (installIdStore.enabled && installIdStore.value.trim()) {
+          console.log('🔧 Using install_id for token request:', installIdStore.value.trim());
+        }
 
         console.log('🎫 Requesting LiveKit token...');
         const token = await ApiService.getLiveKitToken(tokenRequest);
