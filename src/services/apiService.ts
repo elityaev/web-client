@@ -2,6 +2,7 @@ import { TokenRequest, TokenResponse } from '../types';
 import { FirebaseService } from './firebaseService';
 import { getEnv } from '../utils/env';
 import * as CryptoJS from 'crypto-js';
+import { tracing } from './TracingService';
 
 const ASSISTANT_SERVER_URL = getEnv('VITE_ASSISTANT_SERVER_URL') || 'http://localhost:8000';
 const API_KEY = getEnv('VITE_API_KEY') || '';
@@ -27,13 +28,17 @@ export class ApiService {
 
   static async getLiveKitToken(request: TokenRequest): Promise<string> {
     try {
+      // Стартуем дочерний спан для запроса токена
+      const span = tracing.startChildSpan('get_livekit_token');
+      const traceparent = tracing.getTraceparentFor(span.spanId);
+
       // Получаем Firebase ID токен
       const firebaseIdToken = await this.firebaseService.getCurrentIdToken();
 
       // Генерируем случайное значение r
       const randomR = generateRandomR();
 
-      // Добавляем r в запрос
+      // Добавляем r в запрос (traceparent уходит в header)
       const requestWithR = { ...request, r: randomR };
       const requestBody = JSON.stringify(requestWithR);
 
@@ -51,6 +56,7 @@ export class ApiService {
           'Content-Type': 'application/json; charset=UTF8',
           'Authorization': `Bearer ${firebaseIdToken}`,
           'X-Auth': xAuthHeader,
+          'traceparent': traceparent || '',
         },
         body: requestBody,
       });
@@ -76,6 +82,7 @@ export class ApiService {
               'Content-Type': 'application/json; charset=UTF8',
               'Authorization': `Bearer ${newFirebaseIdToken}`,
               'X-Auth': retryXAuthHeader,
+              'traceparent': traceparent || '',
             },
             body: retryRequestBody,
           });
@@ -94,9 +101,11 @@ export class ApiService {
       }
 
       const data: TokenResponse = await response.json();
+      tracing.endSpan();
       return data.token;
     } catch (error) {
       console.error('Failed to get LiveKit token:', error);
+      tracing.endSpan();
       throw error;
     }
   }

@@ -6,7 +6,14 @@ export default defineConfig({
   base: '/web-client/',
   server: {
     port: 3010,
-    host: true
+    host: true,
+    proxy: {
+      '/otlp': {
+        target: 'http://localhost:4318',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/otlp/, ''),
+      }
+    }
   },
   build: {
     outDir: 'dist'

@@ -5,6 +5,7 @@ import { ApiService } from '../services/apiService';
 import { ConnectionState } from '../types';
 import { useOnboardingStore } from './onboardingStore';
 import { useInstallIdStore } from './installIdStore';
+import { tracing } from '../services/TracingService';
 
 interface LiveKitState {
   liveKitService: LiveKitService;
@@ -155,6 +156,9 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
         console.log('🔄 Starting connection process with onboarding:', withOnboarding);
         set({ isConnecting: true });
 
+        // Старт корневого трейса сессии LiveKit
+        tracing.startRootTrace('livekit_session');
+
         // Получаем platform из onboardingStore и install_id из installIdStore
         const onboardingStore = useOnboardingStore.getState();
         const installIdStore = useInstallIdStore.getState();
@@ -213,6 +217,8 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
             error: (error as Error).message,
           },
         }));
+        // В случае ошибки соединения завершаем корневой трейс
+        await tracing.endRootTrace();
       }
     },
 
@@ -231,6 +237,8 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
           },
         });
         console.log('✅ Disconnected successfully');
+        // Завершаем корневой трейс сессии LiveKit
+        await tracing.endRootTrace();
       } catch (error) {
         console.error('❌ Failed to disconnect:', error);
       }
