@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine as build
+FROM node:18 as build
 
 WORKDIR /app
 
@@ -11,6 +11,9 @@ RUN npm ci
 
 # Copy source code
 COPY . .
+
+# Fix rollup native dependencies issue
+RUN rm -rf node_modules package-lock.json && npm install
 
 # Build the application with production optimizations
 RUN npm run build
