@@ -8,6 +8,7 @@ import { LoginScreen } from './LoginScreen';
 import { InstallIdControls } from './InstallIdControls';
 import { getEnv } from '../utils/env';
 import { Loader2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { TracingToggle } from './TracingToggle';
 
 export const TestPage: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -754,6 +755,16 @@ export const TestPage: React.FC = () => {
 
                         {/* Правая колонка - Остальные настройки */}
                         <div className="space-y-4">
+                            {/* Трейсинг / traceparent */}
+                            <div>
+                                <h3 className="text-lg font-semibold mb-3">🧵 Трейсинг (traceparent)</h3>
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <TracingToggle />
+                                    <div className="text-xs text-gray-600 mt-2">
+                                        При выключении заголовок traceparent не отправляется, клиентский трейсинг отключен.
+                                    </div>
+                                </div>
+                            </div>
                             {/* Платформа */}
                             <div>
                                 <h3 className="text-lg font-semibold mb-3">📱 Платформа (token request)</h3>

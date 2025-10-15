@@ -165,7 +165,10 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
     try {
       await onboardingService.sendRpcMethod(method, data);
     } catch (error) {
-      set({ error: (error as Error).message });
+      console.error(`❌ RPC Error in handleRpcMethod (${method}):`, error);
+      const message = (error as Error)?.message || String(error);
+      set({ error: `Method: ${method} — ${message}` });
+      throw error; // Пробрасываем ошибку дальше
     }
   },
 
@@ -186,8 +189,9 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         data,
         timestamp: new Date()
       };
-      // Оставляем только последнюю команду
-      const updatedCommands = [...state.receivedRpcCommands, newCommand].slice(-1);
+      // Сохраняем все команды для тестирования
+      const updatedCommands = [...state.receivedRpcCommands, newCommand];
+      console.log('📞 Updated commands array:', updatedCommands);
       return {
         receivedRpcCommands: updatedCommands
       };
@@ -220,8 +224,8 @@ export const useOnboardingStore = create<OnboardingStore>((set, get) => ({
         error,
         timestamp: new Date()
       };
-      // Оставляем только последнюю команду
-      const updatedCommands = [...state.sentRpcCommands, newCommand].slice(-1);
+      // Сохраняем все команды для тестирования
+      const updatedCommands = [...state.sentRpcCommands, newCommand];
       return {
         sentRpcCommands: updatedCommands
       };

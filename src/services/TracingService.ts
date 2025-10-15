@@ -2,8 +2,10 @@
   TracingService: тонкая обертка над OpenTelemetry Web.
   - Стартует/завершает спаны через OTel
   - Генерирует traceparent из OTel-контекста
+  - Поддерживает условное включение/выключение трейсинга
 */
 import { otelTracer, context, trace, provider } from './otel';
+import { useTracingStore } from '../stores/tracingStore';
 
 type HexString = string;
 
@@ -22,6 +24,7 @@ export class TracingService {
     private tracestate: string | undefined;
     private rootOtelSpan: any = null;  // Храним ссылку на root OTel span
     private currentOtelSpan: any = null;  // Храним ссылку на текущий OTel span
+    private ctxStack: any[] = []; // Стек контекстов для корректной вложенности
 
     public static getInstance(): TracingService {
         if (!this.instance) {
@@ -44,6 +47,13 @@ export class TracingService {
     }
 
     public startRootTrace(name: string): { traceId: HexString; spanId: HexString } {
+        // Проверяем, включен ли трейсинг
+        const isEnabled = useTracingStore.getState().isEnabled;
+        if (!isEnabled) {
+            console.log('🔍 Tracing disabled, skipping root trace');
+            return { traceId: '', spanId: '' };
+        }
+
         console.log('🔍 Starting root trace:', name);
         const span = otelTracer.startSpan(name, { kind: 1 /* CLIENT */ });
         this.rootOtelSpan = span;  // Сохраняем ссылку на root span
@@ -62,6 +72,13 @@ export class TracingService {
     }
 
     public async endRootTrace(): Promise<void> {
+        // Проверяем, включен ли трейсинг
+        const isEnabled = useTracingStore.getState().isEnabled;
+        if (!isEnabled) {
+            console.log('🔍 Tracing disabled, skipping end root trace');
+            return;
+        }
+
         console.log('🔍 Ending root trace');
         if (!this.rootOtelSpan) {
             console.warn('🔍 No root span to end');
@@ -89,8 +106,17 @@ export class TracingService {
     }
 
     public startChildSpan(name: string, attributes?: Record<string, unknown>): { traceId: HexString; spanId: HexString; parentSpanId?: HexString } {
+        // Проверяем, включен ли трейсинг
+        const isEnabled = useTracingStore.getState().isEnabled;
+        if (!isEnabled) {
+            console.log('🔍 Tracing disabled, skipping child span');
+            return { traceId: '', spanId: '', parentSpanId: undefined };
+        }
+
         console.log('🔍 Starting child span:', name);
         const activeCtx = (this as any)._ctx || context.active();
+        // Сохраняем предыдущий контекст в стек, чтобы корректно восстанавливаться при вложенных спанах
+        this.ctxStack.push(activeCtx);
         const span = otelTracer.startSpan(name, { kind: 1 /* CLIENT */ }, activeCtx);
         this.currentOtelSpan = span;  // Сохраняем ссылку на child span
         const sc = span.spanContext();
@@ -107,6 +133,13 @@ export class TracingService {
     }
 
     public endSpan(): void {
+        // Проверяем, включен ли трейсинг
+        const isEnabled = useTracingStore.getState().isEnabled;
+        if (!isEnabled) {
+            console.log('🔍 Tracing disabled, skipping end span');
+            return;
+        }
+
         console.log('🔍 Ending span');
         if (!this.currentOtelSpan) {
             console.warn('🔍 No current span to end');
@@ -118,6 +151,19 @@ export class TracingService {
         this.currentOtelSpan.end();
         this.currentOtelSpan = null;
         this.currentSpan = null;
+
+        // Восстанавливаем контекст: сперва извлекаем из стека предыдущий
+        const prevCtx = this.ctxStack.pop();
+        if (prevCtx) {
+            (this as any)._ctx = prevCtx;
+            console.log('🔍 Context restored to previous span context');
+        } else if (this.rootOtelSpan) {
+            (this as any)._ctx = trace.setSpan(context.active(), this.rootOtelSpan);
+            console.log('🔍 Context restored to root span');
+        } else {
+            (this as any)._ctx = context.active();
+            console.log('🔍 Context cleared to active()');
+        }
     }
 
     public getTraceparentFor(spanId?: HexString): string | null {

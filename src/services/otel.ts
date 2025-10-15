@@ -5,6 +5,7 @@ import { ZoneContextManager } from '@opentelemetry/context-zone';
 import { W3CTraceContextPropagator } from '@opentelemetry/core';
 import { context, propagation, trace } from '@opentelemetry/api';
 import { getEnv } from '../utils/env';
+import { useTracingStore } from '../stores/tracingStore';
 
 // Создаем resource с атрибутами сервиса
 const resourceAttributes = {
@@ -43,6 +44,13 @@ if (otlpEnabled) {
 if (otlpEnabled) {
     const originalExport = exporter.export.bind(exporter);
     exporter.export = (spans: any, resultCallback: any) => {
+        // Проверяем, включен ли трейсинг
+        const isEnabled = useTracingStore.getState().isEnabled;
+        if (!isEnabled) {
+            console.log('🔍 Tracing disabled, skipping OTLP export');
+            return resultCallback({ code: 0 });
+        }
+
         console.log('🔍 OTLP Exporter: sending', spans.length, 'spans to', otlpUrl);
 
         // Логируем структуру первого span'а

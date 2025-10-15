@@ -185,9 +185,15 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
         console.log('✅ LiveKit token received');
 
         console.log('🔌 Connecting to LiveKit...');
-        await liveKitService.connect(token);
-        currentRoom = liveKitService.currentRoom;
-        console.log('✅ Connected to LiveKit room:', currentRoom);
+        // Клиентский спан "connection": start на начале connect(), end на успешном join
+        tracing.startChildSpan('connection');
+        try {
+          await liveKitService.connect(token);
+          currentRoom = liveKitService.currentRoom;
+          console.log('✅ Connected to LiveKit room:', currentRoom);
+        } finally {
+          tracing.endSpan(); // connection
+        }
 
         // Инициализируем OnboardingStore с room
         if (withOnboarding) {
@@ -203,10 +209,15 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
           isConnecting: false
         });
 
+        // Включаем микрофон (вне спана connection)
         console.log('🎤 Enabling microphone...');
         await liveKitService.setMicrophoneEnabled(true);
         set({ localAudioEnabled: true });
         console.log('✅ Microphone enabled');
+
+        // Завершаем root trace после успешного setup
+        console.log('🔍 Connection setup completed, ending root trace');
+        await tracing.endRootTrace();
       } catch (error) {
         console.error('❌ Connection failed:', error);
         set((state) => ({
@@ -237,8 +248,6 @@ export const useLiveKitStore = create<LiveKitState>((set, get) => {
           },
         });
         console.log('✅ Disconnected successfully');
-        // Завершаем корневой трейс сессии LiveKit
-        await tracing.endRootTrace();
       } catch (error) {
         console.error('❌ Failed to disconnect:', error);
       }

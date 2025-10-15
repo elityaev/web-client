@@ -1,10 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuthStore } from './stores/authStore';
 import { TestPage } from './components/TestPage';
+import { BackendTestPage } from './components/BackendTestPage';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 function App() {
   const { isReady, isAuthenticated, isLoading, error, initialize, clearError } = useAuthStore();
+  const [currentPage, setCurrentPage] = useState<'test' | 'backend-test'>('test');
 
   useEffect(() => {
     initialize();
@@ -71,7 +73,39 @@ function App() {
     );
   }
 
-  return <TestPage />;
+  return (
+    <div className="min-h-screen bg-gray-100">
+      {/* Навигация */}
+      <nav className="bg-white shadow-sm border-b">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex space-x-8">
+            <button
+              onClick={() => setCurrentPage('test')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${currentPage === 'test'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Тест приложения
+            </button>
+            <button
+              onClick={() => setCurrentPage('backend-test')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${currentPage === 'backend-test'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+            >
+              Тестирование бэкенда
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Контент */}
+      {currentPage === 'test' && <TestPage />}
+      {currentPage === 'backend-test' && <BackendTestPage />}
+    </div>
+  );
 }
 
 export default App; 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { RpcAction } from '../services/onboardingService';
+import { TracingToggle } from './TracingToggle';
 
 interface MainButton {
     text: string;
@@ -32,6 +33,11 @@ export const MainScreen: React.FC<MainScreenProps> = ({ data, onRpcAction }) => 
     return (
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl mx-auto">
             <h2 className="text-3xl font-bold text-center mb-8 text-gray-900">🤖 Virtual Assistant</h2>
+
+            {/* Tracing Toggle */}
+            <div className="mb-6">
+                <TracingToggle />
+            </div>
 
             {/* Main Text */}
             <div className="text-center mb-8">

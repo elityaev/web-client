@@ -305,6 +305,14 @@ export class OnboardingService {
 
         console.log('📱 Parsed screen data:', screenData);
 
+        // Добавляем команду в историю для тестирования
+        if (this.onRpcCommand) {
+          this.onRpcCommand({
+            method: 'show-screen',
+            command_data: screenData
+          });
+        }
+
         // Специальная обработка для choose_music_app - парсим payload в rpc_on_click
         if (screenData.screen_type === 'choose_music_app' && screenData.data?.apps) {
           screenData.data.apps.forEach((app: any) => {
@@ -1155,24 +1163,8 @@ export class OnboardingService {
     } catch (error) {
       console.error(`❌ Failed to send RPC method ${method}:`, error);
 
-      // Попробуем отправить через DataChannel как fallback
-      console.log(`🔄 Trying to send via DataChannel as fallback...`);
-      try {
-        const encoder = new TextEncoder();
-        // Аналогично для DataChannel
-        const rpcPayload = typeof data === 'string' ? data : JSON.stringify(data);
-        const fallbackData = encoder.encode(JSON.stringify({
-          type: 'rpc_request',
-          method: method,
-          data: rpcPayload
-        }));
-
-        await this.room.localParticipant.publishData(fallbackData, { reliable: true });
-        console.log(`✅ Sent via DataChannel successfully`);
-      } catch (fallbackError) {
-        console.error(`❌ DataChannel fallback also failed:`, fallbackError);
-        throw error;
-      }
+      // Пробрасываем ошибку дальше, чтобы она попала в store
+      throw error;
     }
   }
 }
